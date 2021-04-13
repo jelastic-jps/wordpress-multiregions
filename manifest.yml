@@ -62,11 +62,24 @@ settings:
       default: async
       required: true
       width: 443
+      tooltip:
+      tipParams: 
+        maxWidth: 600
       values:        
           - value: async
-            caption: Async Master/Slave Geo Distributed Topology 
+            caption: Async Master-Master Replication Topology 
+            tooltip: <h2>Master-Master with Extra Slaves</h2> 
+                     Pre-configured asynchronous replication with two interconnected<br> master databases and one slave.<br>
+                     This topology is recommended when <b>Latency</b> between regions more than <b>20ms</b>.<br>
+                     Master node at Region 1 acts as Global master.<br> 
+                     Master node at Region 2 acts as Backup of Global master.<img width='587' height='500' src='https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregions/master/images/wp-geo-mm-white.svg'>" 
+
           - value: sync
-            caption: Sync Galera Geo Distributed Topology
+            caption: Sync Galera Cluster Replication Topology
+            tooltip: <h2>Galera Cluster</h2>
+                     All servers can accept updates even if being issued concurrently.<br>
+                     This topology is recommended when <b>Latency</b> between regions is less than <b>20ms</b><br>
+                     <img width='580' height='500' src='https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregions/master/images/wp-geo-galera-white.svg?sanitize=true'>
 
     - caption: Advanced Features
       type: displayfield
