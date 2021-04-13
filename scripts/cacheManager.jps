@@ -1,0 +1,68 @@
+jpsType: update
+id: wordpress-multiregion-cache-manager-addon
+name: WordPress Multiregion Cache Manager Add-on
+description: WordPress Multiregion Cache Manager Add-on
+
+baseUrl: https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregions/master
+
+globals:
+  setup_cache_replication: ${settings.setup_cache_replication:false}
+  clean_cache: ${settings.clean_cache:false}
+
+onInstall:
+  - getClusterEnvs
+  - if ('${globals.setup_cache_replication}' == 'true'): setupCacheReplication
+  - if ('${globals.clean_cache}' == 'true'): cleanCache
+
+actions:
+  getClusterEnvs:
+    - script: ${baseUrl}/scripts/getClusterEnvs.js
+      envName: ${env.name}
+    - setGlobals:
+        clusterEnvs: ${response.items.join(,)}
+
+  cleanCache:
+   - script: |
+        var envs = '${globals.clusterEnvs}'.split(','),
+            actions = [];
+        for (var i = 0, n = envs.length; i < n; i ++) {
+          var resp = jelastic.env.control.GetEnvInfo(envs[i], session);
+          if (resp.result != 0) return resp;
+          if (resp.env.status == 1) {        
+            actions.push({
+              jps: "${baseUrl}/scripts/cache.jps?_r=${fn.random}",
+              envName: envs[i],
+              settings: {
+                clean_cache: "true"
+              }  
+            });
+          }
+        }
+        return { result: 0, onAfterReturn: { install: actions } };
+
+  setupCacheReplication:
+    - script: |
+        var envs = '${globals.clusterEnvs}'.split(','),
+            actions = [],
+            bl_nodes_address = "";
+        for (var i = 0, n = envs.length; i < n; i ++) {
+          var resp = jelastic.env.control.GetEnvInfo(envs[i], session);
+          if (resp.result != 0) return resp;
+          for (var l = 0, k = resp.nodes; l < k.length; l++) {
+            if (k[l].nodeGroup == 'bl') {
+              bl_nodes_address += k[l].address + ":1447,";
+            }
+          }
+        }
+        bl_nodes_address = bl_nodes_address.slice(0, -1);
+        for (var i = 0, n = envs.length; i < n; i ++) {
+          actions.push({
+            jps: "${baseUrl}/scripts/cache.jps?_r=${fn.random}",
+            envName: envs[i],
+            settings: {
+              bl_nodes_address: bl_nodes_address,
+              setup_cache_replication: "true"
+            }  
+          });
+        }
+        return { result: 0, onAfterReturn: { install: actions } };

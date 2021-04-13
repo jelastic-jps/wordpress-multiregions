@@ -1,0 +1,26 @@
+jpsType: update
+id: wordpress-multiregion-slave-manager-addon
+name: WordPress Multiregion Slave Manager Add-on
+description: WordPress Multiregion Slave Manager Add-on
+
+onBeforeStop:
+  - forEach(i:nodes.sqldb):
+      env.control.StopNode [${@i.id}]
+
+onInstall:
+  - installDummyAddons
+
+actions:
+  installDummyAddons:
+    install:
+      - jps: /dummyLE.jps?_r=${fn.random}
+        nodeGroup: bl
+        
+  deleteGeoGlusterSlave:
+    - api: env.control.ExecCmdById
+      envName: ${globals.envName}-1
+      nodeId: ${globals.master_id_glusterfs}
+      commandList:
+        - command: |-
+            gluster volume geo-replication jelastic jelastic@${nodes.storage.master.address}::jelastic stop force
+            gluster volume geo-replication jelastic jelastic@${nodes.storage.master.address}::jelastic delete

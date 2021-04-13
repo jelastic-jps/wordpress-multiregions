@@ -1,0 +1,143 @@
+jpsType: update
+id: async-geo-replication
+name: Async Geo Replication
+description: Async Geo Replication
+baseUrl: https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregions/master
+
+globals:
+  master: ${settings.master:false}
+  pre_install: ${settings.pre_install:false}
+  post_install: ${settings.post_install:false}
+  db_user: ${settings.db_user}
+  db_pass: ${settings.db_pass}
+  repl_user: ${settings.repl_user}
+  repl_pass: ${settings.repl_pass}
+  monitor_user: ${settings.monitor_user}
+  monitor_pass: ${settings.monitor_pass}
+  cluster_name: ${settings.cluster_name:false}
+  db_cluster_url: https://raw.githubusercontent.com/jelastic-jps/mysql-cluster/v2.4.0
+  
+onInstall:
+  - if ('${globals.pre_install}' == 'true'):
+    - if ('${globals.master}' == 'true'):
+      - if ('${env.envName}' == '${globals.cluster_name}-1'):
+        - masterConfiguration:
+            increment: 1
+      - else:
+        - masterConfiguration:
+            increment: 2
+    - else:
+      - slaveConfiguration
+    - setupMainUser
+    - setupReplicaUser
+    - setupMonitorUser
+  - if ('${globals.post_install}' == 'true'):
+    - getMastersIPs
+    - setupProxySQL
+    - if ('${globals.master}' == 'true'):
+      - if ('${env.envName}' == '${globals.cluster_name}-1'):
+        - setupMaterReplication:
+            master: ${globals.master2_ip}
+        - addMasterToProxySQL
+        - addSlaveToProxySQL:
+            slaveIP: ${globals.master2_ip}
+            weight: 1       
+      - else:
+        - setupMaterReplication:
+            master: ${globals.master1_ip}
+        - addMasterToProxySQL
+        - addSlaveToProxySQL:
+            slaveIP: ${globals.master1_ip}
+            weight: 1
+    - else:
+        - setupSlaveReplication
+        - addMasterToProxySQL
+    - addSlaveToProxySQL:
+        slaveIP: ${nodes.sqldb.master.address}
+        weight: 100000
+
+actions:
+  setupMainUser:
+    cmd[sqldb]: |-
+      wget ${globals.db_cluster_url}/scripts/setupUser.sh -O ~/setupUser.sh &>> /var/log/run.log
+      bash ~/setupUser.sh ${globals.db_user} ${globals.db_pass} &>> /var/log/run.log
+    user: root
+
+  setupReplicaUser:
+    cmd[sqldb]: |-
+      MYSQL_PWD=${globals.db_pass} mysql -u${globals.db_user} -e "CREATE USER '${globals.repl_user}'@'%' IDENTIFIED BY '${globals.repl_pass}';";
+      MYSQL_PWD=${globals.db_pass} mysql -u${globals.db_user} -e "GRANT REPLICATION CLIENT,REPLICATION SLAVE ON *.* TO '${globals.repl_user}'@'%'; FLUSH PRIVILEGES;";
+      
+  setupMonitorUser:
+    cmd[sqldb]: |-
+      MYSQL_PWD=${globals.db_pass} mysql -u${globals.db_user} -e "CREATE USER '${globals.monitor_user}'@'%' IDENTIFIED BY '${globals.monitor_pass}';"
+      MYSQL_PWD=${globals.db_pass} mysql -u${globals.db_user} -e "GRANT SUPER,REPLICATION CLIENT ON *.* TO '${globals.monitor_user}'@'%';"
+      MYSQL_PWD=${globals.db_pass} mysql -u${globals.db_user} -e "FLUSH PRIVILEGES;"
+      
+  masterConfiguration:
+    cmd[sqldb]: |-
+        wget ${globals.db_cluster_url}/configs/gtidMaster.cnf -O /etc/mysql/conf.d/master.cnf &>> /var/log/run.log
+        sed -i "s/report_host.*/report_host = node${nodes.sqldb.master.id}/" /etc/mysql/conf.d/master.cnf; 
+        sed -i "s/server-id.*/server-id = ${nodes.sqldb.master.id}/" /etc/mysql/conf.d/master.cnf
+        sed -i "s/auto-increment-offset.*/auto-increment-offset = ${this.increment}/" /etc/mysql/conf.d/master.cnf
+
+  slaveConfiguration:
+    cmd[sqldb]: |-
+        wget ${globals.db_cluster_url}/configs/gtidSlave.cnf -O /etc/mysql/conf.d/slave.cnf &>> /var/log/run.log
+        sed -i "s/report_host.*/report_host = node${nodes.sqldb.master.id}/" /etc/mysql/conf.d/slave.cnf; 
+        sed -i "s/server-id.*/server-id = ${nodes.sqldb.master.id}/" /etc/mysql/conf.d/slave.cnf
+
+  setupMaterReplication:
+    cmd[sqldb]: |-
+      MYSQL_PWD=${globals.db_pass} mysql -u${globals.db_user} -e "CHANGE MASTER TO MASTER_HOST = '${this.master}', MASTER_USER = '${globals.repl_user}', MASTER_PASSWORD = '${globals.repl_pass}',  MASTER_AUTO_POSITION = 1;";
+      MYSQL_PWD=${globals.db_pass} mysql -u${globals.db_user} -e "START SLAVE;";
+
+  setupSlaveReplication:
+    cmd[sqldb]: |-
+      MYSQL_PWD=${globals.db_pass} mysql -u${globals.db_user} -e "CHANGE MASTER TO MASTER_HOST = '${globals.master1_ip}', MASTER_USER = '${globals.repl_user}', MASTER_PASSWORD = '${globals.repl_pass}',  MASTER_AUTO_POSITION = 1, MASTER_RETRY_COUNT=1 FOR CHANNEL 'ch1';";
+      MYSQL_PWD=${globals.db_pass} mysql -u${globals.db_user} -e "SELECT asynchronous_connection_failover_add_source('ch1', '${globals.master1_ip}', 3306, '', 100000);";
+      MYSQL_PWD=${globals.db_pass} mysql -u${globals.db_user} -e "SELECT asynchronous_connection_failover_add_source('ch1', '${globals.master2_ip}', 3306, '', 1);";
+      MYSQL_PWD=${globals.db_pass} mysql -u${globals.db_user} -e "CHANGE MASTER TO SOURCE_CONNECTION_AUTO_FAILOVER=1 FOR CHANNEL 'ch1';";
+      MYSQL_PWD=${globals.db_pass} mysql -u${globals.db_user} -e "START REPLICA FOR CHANNEL 'ch1';";
+      
+  setupProxySQL:
+    cmd[proxy]: |-
+      MYSQL_PWD=admin mysql -h 127.0.0.1 -P6032 -uadmin -e "INSERT INTO mysql_replication_hostgroups VALUES (10,11,'read_only','Group setup');"
+      MYSQL_PWD=admin mysql -h 127.0.0.1 -P6032 -uadmin -e "INSERT INTO mysql_users (username, password, active, default_hostgroup, max_connections) VALUES ('${globals.db_user}', '${globals.db_pass}', 1, 10, 1000);"
+      MYSQL_PWD=admin mysql -h 127.0.0.1 -P6032 -uadmin -e "INSERT INTO mysql_query_rules (active, match_pattern, destination_hostgroup, apply) VALUES (1, '^SELECT.*', 11, 1);"
+      MYSQL_PWD=admin mysql -h 127.0.0.1 -P6032 -uadmin -e "INSERT INTO mysql_query_rules (active, match_pattern, destination_hostgroup, apply) VALUES (1, '^SELECT.*FOR UPDATE', 10, 1);"
+      MYSQL_PWD=admin mysql -h 127.0.0.1 -P6032 -uadmin -e "UPDATE global_variables SET variable_value='${globals.monitor_user}' WHERE variable_name='mysql-monitor_username';"
+      MYSQL_PWD=admin mysql -h 127.0.0.1 -P6032 -uadmin -e "UPDATE global_variables SET variable_value='${globals.monitor_pass}' WHERE variable_name='mysql-monitor_password';"
+      MYSQL_PWD=admin mysql -h 127.0.0.1 -P6032 -uadmin -e "LOAD MYSQL VARIABLES TO RUNTIME; SAVE MYSQL VARIABLES TO DISK;"
+      MYSQL_PWD=admin mysql -h 127.0.0.1 -P6032 -uadmin -e "LOAD MYSQL USERS TO RUNTIME; SAVE MYSQL USERS TO DISK;"
+      MYSQL_PWD=admin mysql -h 127.0.0.1 -P6032 -uadmin -e "LOAD MYSQL QUERY RULES TO RUNTIME; SAVE MYSQL QUERY RULES TO DISK;"
+
+  addMasterToProxySQL:
+    cmd[proxy]: |-
+      MYSQL_PWD=admin mysql -h 127.0.0.1 -P6032 -uadmin -e "INSERT INTO mysql_servers (hostgroup_id, hostname, port,weight) VALUES (10, '${globals.master1_ip}', 3306,100000);"
+      MYSQL_PWD=admin mysql -h 127.0.0.1 -P6032 -uadmin -e "INSERT INTO mysql_servers (hostgroup_id, hostname, port,weight) VALUES (10, '${globals.master2_ip}', 3306,1);"
+      MYSQL_PWD=admin mysql -h 127.0.0.1 -P6032 -uadmin -e "LOAD MYSQL SERVERS TO RUNTIME; SAVE MYSQL SERVERS TO DISK;"
+  
+  addSlaveToProxySQL:
+    cmd[proxy]: |-
+      MYSQL_PWD=admin mysql -h 127.0.0.1 -P6032 -uadmin -e "INSERT INTO mysql_servers (hostgroup_id, hostname, port,weight) VALUES (11, '${this.slaveIP}', 3306, '${this.weight}');"
+      MYSQL_PWD=admin mysql -h 127.0.0.1 -P6032 -uadmin -e "LOAD MYSQL SERVERS TO RUNTIME; SAVE MYSQL SERVERS TO DISK;"
+
+  getMastersIPs:
+     - script: |
+        var onAfterReturn = { setGlobals: {} },
+            glbs = onAfterReturn.setGlobals;
+        var resp = jelastic.env.control.GetEnvInfo("${globals.cluster_name}-1", session);
+        if (resp.result != 0) return resp;
+        for (var i = 0, k = resp.nodes; i < k.length; i++) {
+          if (k[i].nodeGroup == 'sqldb')
+              k[i].ismaster ? glbs["master1_ip"] = k[i].address : 0;
+        }
+        var resp = jelastic.env.control.GetEnvInfo("${globals.cluster_name}-2", session);
+        if (resp.result != 0) return resp;
+        for (var i = 0, k = resp.nodes; i < k.length; i++) {
+          if (k[i].nodeGroup == 'sqldb')
+              k[i].ismaster ? glbs["master2_ip"] = k[i].address : 0;
+        }
+        return { result: 0, onAfterReturn: onAfterReturn };
+    

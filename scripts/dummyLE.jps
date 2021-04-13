@@ -1,0 +1,13 @@
+version: 1.3
+type: update
+build: 201807232048
+id: letsencrypt-ssl-addon
+
+name: Let's Encrypt Free SSL
+homepage: https://github.com/jelastic-jps/lets-encrypt
+baseUrl: https://raw.githubusercontent.com/jelastic-jps/lets-encrypt/master
+logo: images/lets-encrypt.png
+
+description:
+  text: /text/description.md
+  short: Use/Manage/Configure add-on on the master environment of the Multiregional WordPress Cluster

@@ -1,0 +1,79 @@
+jpsType: update
+id: async-geo-replication-manager
+name: Async Geo Replication Manager
+description: Async Geo Replication Manager
+baseUrl: https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregions/master
+
+globals:
+  db_user: ${settings.db_user}
+  db_pass: ${settings.db_pass}
+  repl_user: ${settings.repl_user}
+  repl_pass: ${settings.repl_pass}
+  monitor_user: ${settings.monitor_user}
+  monitor_pass: ${settings.monitor_pass}
+  cluster_name: ${settings.cluster_name}
+
+onInstall:
+  - getClusterEnvs
+  - initialAsyncReplication
+  - startAsyncReplication
+
+actions:
+  getClusterEnvs:
+    - script: ${baseUrl}/scripts/getClusterEnvs.js
+      envName: ${env.name}
+    - setGlobals:
+        nextIndex: ${response.nextIndex}
+        clusterEnvs: ${response.items.join(,)}
+
+  initialAsyncReplication:
+    - script: |
+        var envs = '${globals.clusterEnvs}'.split(','),
+            actions = [], master;
+        for (var i = 0, n = envs.length; i < n; i ++) {
+          master = false;
+          if ((envs[i] == "${globals.cluster_name}-1") || (envs[i] == "${globals.cluster_name}-2"))
+            master = true;
+          actions.push({
+            jps: "${baseUrl}/scripts/asyncReplication.jps?_r=${fn.random}",
+            envName: envs[i],
+            settings: {
+              master: master,
+              pre_install: "true",
+              db_user: "${globals.db_user}",
+              db_pass: "${globals.db_pass}",
+              repl_user: "${globals.repl_user}",
+              repl_pass: "${globals.repl_pass}",
+              monitor_user: "${globals.monitor_user}",
+              monitor_pass: "${globals.monitor_pass}",
+              cluster_name: "${globals.cluster_name}"              
+            }
+          });
+        }
+        return { result: 0, onAfterReturn: { install: actions } };
+
+  startAsyncReplication:
+    - script: |
+        var envs = '${globals.clusterEnvs}'.split(','),
+            actions = [], master;
+        for (var i = 0, n = envs.length; i < n; i ++) {
+          master = false;
+          if ((envs[i] == "${globals.cluster_name}-1") || (envs[i] == "${globals.cluster_name}-2"))
+            master = true;
+          actions.push({
+            jps: "${baseUrl}/scripts/asyncReplication.jps?_r=${fn.random}",
+            envName: envs[i],
+            settings: {
+              master: master,
+              post_install: "true",
+              db_user: "${globals.db_user}",
+              db_pass: "${globals.db_pass}",
+              repl_user: "${globals.repl_user}",
+              repl_pass: "${globals.repl_pass}",
+              monitor_user: "${globals.monitor_user}",
+              monitor_pass: "${globals.monitor_pass}",
+              cluster_name: "${globals.cluster_name}"              
+            }
+          });
+        }
+        return { result: 0, onAfterReturn: { install: actions } };

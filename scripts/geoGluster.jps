@@ -1,0 +1,54 @@
+jpsType: update
+id: geo-glusterfs-cluster
+name: Geo GlusterFS Cluster
+description: Geo GlusterFS Cluster
+
+globals:
+  install_required_packages: ${settings.install_required_packages:false}
+  initial_glusterfs_master: ${settings.initial_glusterfs_master:false}
+  initial_glusterfs_slave: ${settings.initial_glusterfs_slave:false}
+  setup_glusterfs_cluster: ${settings.setup_glusterfs_cluster:false}
+  glusterfs_slaves_address: ${settings.glusterfs_slaves_address:false}
+  addCommonPubKey: ${settings.addCommonPubKey:false}
+
+onInstall:
+  - if ('${globals.install_required_packages}' == 'true'):  installRequiredPackages
+  - if ('${globals.setup_glusterfs_cluster}' == 'true'):  initialGeoGlusterFSCluster
+  - if ('${globals.initial_glusterfs_master}' == 'true'): initialMasterGlusterFSCluster
+  - if ('${globals.initial_glusterfs_slave}' == 'true'): initialSlaveGlusterFSCluster
+  - if ('${globals.addCommonPubKey}' == 'true'): addCommonPubKey
+  - if ('${globals.glusterfs_slaves_address}' != 'false'):
+      - addSlaveGlusterFS:
+          slave: ${globals.glusterfs_slaves_address}
+    
+actions:
+
+  installRequiredPackages:
+    - cmd[storage]: |-
+        groupadd geogroup; usermod -a -G geogroup jelastic;
+      user: root
+
+  initialGeoGlusterFSCluster:
+    - cmd[storage]: |-
+        echo "${settings.sshPubKey}" >> /root/.ssh/authorized_keys;
+      user: root
+  
+  initialSlaveGlusterFSCluster:
+    - cmd[${nodes.storage.master.id}]: |-
+        gluster-mountbroker setup /var/mountbroker-root geogroup;
+        gluster-mountbroker add jelastic geoaccount;
+
+  initialMasterGlusterFSCluster:
+    - cmd[${nodes.storage.master.id}]: |-
+        gluster system:: exec gsec_create;
+      user: root
+  
+  addCommonPubKey:
+    - cmd[storage]: |-
+        echo '${settings.commonPubKey}' >> /root/.ssh/authorized_keys;
+  
+  addSlaveGlusterFS:
+    - cmd[${nodes.storage.master.id}]: |-
+        gluster volume geo-replication jelastic jelastic@${this.slave}::jelastic create push-pem force
+        gluster volume geo-replication jelastic jelastic@${this.slave}::jelastic start
+    

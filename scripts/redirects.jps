@@ -1,0 +1,47 @@
+jpsType: update
+id: multiregion-wp-redirects
+name: Multiregion WP Redirects addon
+description: Multiregion WP Redirects
+   
+onInstall:
+  - addMasterCluster
+  - addRedirects
+  - cmd[${nodes.bl.master.id}]: sudo jem service restart;
+
+actions:
+  addMasterCluster:
+    - cmd[${nodes.bl.master.id}]: |-
+       /usr/bin/xmlstarlet ed --inplace -d "loadBalancerConfig/loadBalancerList/loadBalancer[name = 'masterENV']" /var/www/conf/lslbd_config.xml;
+       /usr/bin/xmlstarlet ed --inplace -s "loadBalancerConfig/loadBalancerList"  -t elem -n "loadBalancer" \
+       -s "loadBalancerConfig/loadBalancerList/loadBalancer[not(name)]" -t elem -n "name" -v "masterENV" \
+       -s "loadBalancerConfig/loadBalancerList/loadBalancer[name = 'masterENV']"  -t elem -n "type" -v "layer7" \
+       -s "loadBalancerConfig/loadBalancerList/loadBalancer[name = 'masterENV']"  -t elem -n "mode" -v "0" \
+       -s "loadBalancerConfig/loadBalancerList/loadBalancer[name = 'masterENV']"  -t elem -n "strategy" -v "0" \
+       -s "loadBalancerConfig/loadBalancerList/loadBalancer[name = 'masterENV']"  -t elem -n "sessionExMethod" -v "25" \
+       -s "loadBalancerConfig/loadBalancerList/loadBalancer[name = 'masterENV']"  -t elem -n "workerGroupList" -v "" \
+       -s "loadBalancerConfig/loadBalancerList/loadBalancer[name = 'masterENV']/workerGroupList"  -t elem -n "workerGroup" -v "" \
+       -s "loadBalancerConfig/loadBalancerList/loadBalancer[name = 'masterENV']/workerGroupList/workerGroup"  -t elem -n "name" -v "master-ip" \
+       -s "loadBalancerConfig/loadBalancerList/loadBalancer[name = 'masterENV']/workerGroupList/workerGroup"  -t elem -n "type" -v "proxy" \
+       -s "loadBalancerConfig/loadBalancerList/loadBalancer[name = 'masterENV']/workerGroupList/workerGroup"  -t elem -n "workerGroupEnabled" -v "1" \
+       -s "loadBalancerConfig/loadBalancerList/loadBalancer[name = 'masterENV']/workerGroupList/workerGroup"  -t elem -n "sourceIP" -v "ANY" \
+       -s "loadBalancerConfig/loadBalancerList/loadBalancer[name = 'masterENV']/workerGroupList/workerGroup"  -t elem -n "defaultTargetPort" -v "80" \
+       -s "loadBalancerConfig/loadBalancerList/loadBalancer[name = 'masterENV']/workerGroupList/workerGroup"  -t elem -n "maxConns" -v "2000" \
+       -s "loadBalancerConfig/loadBalancerList/loadBalancer[name = 'masterENV']/workerGroupList/workerGroup"  -t elem -n "initTimeout" -v "60" \
+       -s "loadBalancerConfig/loadBalancerList/loadBalancer[name = 'masterENV']/workerGroupList/workerGroup"  -t elem -n "retryTimeout" -v "5" \
+       -s "loadBalancerConfig/loadBalancerList/loadBalancer[name = 'masterENV']/workerGroupList/workerGroup"  -t elem -n "respBuffer" -v "0" \
+       -s "loadBalancerConfig/loadBalancerList/loadBalancer[name = 'masterENV']/workerGroupList/workerGroup"  -t elem -n "pingUrl" -v "http://${settings.master_ip}:80/" \
+       -s "loadBalancerConfig/loadBalancerList/loadBalancer[name = 'masterENV']/workerGroupList/workerGroup"  -t elem -n "nodeAddresses" -v "${settings.master_ip}" /var/www/conf/lslbd_config.xml;
+
+  addRedirects:
+    - cmd[${nodes.bl.master.id}]: |-
+       /usr/bin/xmlstarlet ed --inplace -d "virtualHostConfig/contextList" /var/www/conf/jelastic.xml;
+       /usr/bin/xmlstarlet ed --inplace -s "virtualHostConfig"  -t elem -n "contextList" \
+       -s "virtualHostConfig/contextList" -t elem -n "context" -v "" \
+       -s "virtualHostConfig/contextList/context" -t elem -n "type" -v "loadbalancer" \
+       -s "virtualHostConfig/contextList/context" -t elem -n "uri" -v "exp: ^/(wp-admin|wp-login.php|wp-cron.php|\.well-known/acme-challenge)" \
+       -s "virtualHostConfig/contextList/context" -t elem -n "handler" -v "masterENV" \
+       -s "virtualHostConfig/contextList/context" -t elem -n "accessControl" -v "" \
+       -s "virtualHostConfig/contextList/context" -t elem -n "cachePolicy" -v "" \
+       -s "virtualHostConfig/contextList/context" -t elem -n "rewrite" -v "" \
+       -s "virtualHostConfig/contextList/context" -t elem -n "addDefaultCharset" -v "off" /var/www/conf/jelastic.xml;
+

@@ -1,0 +1,61 @@
+jpsType: update
+id: wordpress-multiregion-env-manager
+name: WordPress Multiregion Environment Manager Add-on
+description: WordPress Multiregion Environment Manager Add-on
+baseUrl: https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregions/master
+
+globals:
+  wp_cluster_url: ${settings.wp_cluster_url}
+  db_cluster_url: ${settings.db_cluster_url}
+  is_multiregional_deploy: true
+  master_env_name: ${settings.master_env_name}
+  galera_server_id: ${settings.galera_server_id}
+  galera_segment_id: ${settings.galera_segment_id}
+  db_user: ${settings.db_user}
+  db_pass: ${settings.db_pass}
+  db_host: sqldb
+  ls_admin_pass: ${settings.ls_admin_pass}
+
+onBeforeClone:
+  stopEvent:
+    type: warning
+    message: Cloning is not supported for multiregion cluster. 
+
+onBeforeMigrate:
+  stopEvent:
+    type: warning
+    message: Migration is not supported for multiregion cluster. 
+
+onInstall:
+  - env.control.ApplyNodeGroupData [bl]:
+      data: 
+        globals: "${globals.toJSON()}"
+  - getClusterEnvs
+  - setupEnvs
+
+actions:
+  getClusterEnvs:
+    - script: ${baseUrl}/scripts/getClusterEnvs.js
+      envName: ${env.envName}
+    - setGlobals:
+        nextIndex: ${response.nextIndex}
+        clusterEnvs: ${response.items.join(,)}
+        
+  setupEnvs:
+    - script: |
+        var envs = '${globals.clusterEnvs}'.split(','),
+            actions = [];
+        for (var i = 0, n = envs.length; i < n; i ++) {
+          if (envs[i] == "${globals.master_env_name}"){
+            actions.push({
+              jps: "${baseUrl}/scripts/masterEnv.jps?_r=${fn.random}",
+              envName: envs[i]
+            });
+          } else {
+            actions.push({
+              jps: "${baseUrl}/scripts/slaveEnv.jps?_r=${fn.random}",
+              envName: envs[i]
+            });
+          }
+        }
+        return { result: 0, onAfterReturn: { install: actions } };

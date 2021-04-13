@@ -1,0 +1,391 @@
+type: install
+jpsVersion: '1.7.2'
+name: Multi-Regional WordPress Cluster (BETA)
+id: wordpress-cluster-multiregions
+categories:
+  - apps/clusters
+  - apps/content-management
+description: 
+  text: Highly-available and reliable WordPress cluster setup with multi-regional distribution. 
+    The package creates interconnected WordPress instances (sub clusters) across several availability zones ensuring the highest uptime and lowest latency.
+  short: Enterprise-grade WordPress Cluster with servers in multiple regions.
+logo: https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregions/master/images/82dark-back-01.svg
+baseUrl: https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregions/master
+
+onBeforeInit: /scripts/settings.js?_r=${fn.random}
+
+settings:
+  fields:
+    - caption: Regions
+      type: regionlist
+      name: regions
+      disableInactive: true
+      selectFirstAvailable: true
+      multiSelect: true
+      min: 3
+      max: 5
+      filter:
+        isActive: true
+      tooltip: <h3>Select destination regions.</h3> The first region selected should have the highest performance. It will host a primary cluster.
+
+    - caption: Environment
+      type: envname
+      name: envName
+      dependsOn: region
+      randomName: true
+      showFullDomain: false
+      required: true
+
+    - caption: Scaling Strategy
+      type: list
+      name: loadGrowth
+      default: slow
+      required: true
+      width: 225
+      tooltip: | 
+        Configure auto-scaling triggers, i.e. how fast the system responds to load spikes by adding or removing nodes.
+        <p>Read more about <a href="https://docs.jelastic.com/automatic-horizontal-scaling">Automatic Horizontal Scaling</a></p>
+      values:        
+          - value: slow
+            caption: Low Load
+            tooltip: <h2>Low load scaling strategy</h2>add 1 new node when CPU > 70% <p>remove when CPU < 20%</p>
+          - value: medium
+            caption: Medium Load
+            tooltip: <h3>Medium load scaling strategy</h3>add 1 new node when CPU > 50% <p>remove when CPU < 20%</p>
+          - value: fast
+            caption: High Load
+            tooltip: <h3>High load scaling strategy</h3>add 2 new nodes when CPU > 30% <p>remove when CPU < 10%</p>
+
+    - caption: Database Topology
+      type: list
+      name: db_async_topology
+      default: async
+      required: true
+      width: 443
+      values:        
+          - value: async
+            caption: Async Master/Slave Geo Distributed Topology 
+          - value: sync
+            caption: Sync Galera Geo Distributed Topology
+
+    - caption: Advanced Features
+      type: displayfield
+      name: displayfield
+      markup:
+ 
+    - caption: WordPress Brute Force Attack Protection
+      type: checkbox
+      name: wp_protect
+      value: true
+      disabled: false
+      tooltip: "Secure WordPress Admin Panel with <a href='https://www.litespeedtech.com/support/wiki/doku.php/litespeed_wiki:config:wordpress-protection'>LiteSpeed Brute Force Protection</a> that limits failed login attempts. Default action is <b>Throttle</b> and number of allowed attempts is <b>100</b>"
+
+    - caption: Web Application Firewall
+      type: checkbox
+      name: waf
+      value: true
+      disabled: false
+      tooltip: "Protect web sites with <a href='https://www.litespeedtech.com/support/wiki/doku.php/litespeed_wiki:waf'>LiteSpeed built-in WAF</a> based on Free ModSecurity Rules from Comodo"
+
+    - caption: Install Let's Encrypt SSL with Auto-Renewal
+      type: checkbox
+      name: le_addon
+      value: false
+      disabled: true
+      tooltip: "Advanced integration with Let's Encrypt certificate authority that simplifies and automates the process of issuing, configuring and updating trusted custom SSL certificates."
+
+    - caption: Install Lightning-Fast Premium CDN with 160+ PoPs
+      type: checkbox
+      name: cdn_addon
+      value: true
+      disabled: false
+      tooltip: "Jelastic CDN is an HTTP/3 premium content delivery network of 160+ Super PoPs (points of presence) with bandwidth capacity up to 115 Tbps, advanced caching and acceleration strategies based on best-in-class IP Anycast technology."
+
+    - caption: CloudFlare registration
+      type: checkbox
+      name: cf_addon
+      value: false
+      disabled: false
+      hidden: false
+      tooltip: "CloudFlare registration"
+      showIf:
+        true:
+          - caption: CloudFlare Auth Email
+            type: string
+            name: cf_auth_email
+            tooltip: ""
+
+          - caption: CloudFlare Auth Key
+            type: string
+            name: cf_auth_key
+            tooltip: ""
+
+          - caption: CloudFlare Zone ID
+            type: string
+            name: cf_zone_id
+            tooltip: ""
+
+          - caption: Domain
+            type: string
+            name: cf_domain
+            tooltip: ""
+
+        false:
+          - hideLabel: true
+            hidden: true
+            type: label
+            caption: string
+            name: customString 
+
+    - type: displayfield
+      hideLabel: true
+      hidden: true
+      name: bl_count   
+      value: 1
+      markup:
+
+globals:
+  wp_cluster_url: https://raw.githubusercontent.com/jelastic-jps/wordpress-cluster/v3.0.0
+  db_cluster_url: https://raw.githubusercontent.com/jelastic-jps/mysql-cluster/v2.4.0
+  galera_server_id: ${fn.random}
+  db_user: jelastic-${fn.random}
+  db_pass: ${fn.password(10)}
+  repl_user: replica-${fn.random}
+  repl_pass: ${fn.password(10)}
+  monitor_user: monitor-${fn.random}
+  monitor_pass: ${fn.password(10)}
+  protocol: http
+  wp_admin_pass: ${fn.password(10)}
+  ls_admin_pass: ${fn.password(10)}
+  success: default
+  email: default
+
+onInstall:
+  - if ('${settings.db_async_topology}' == 'async'):
+      setGlobals:
+        db_host: proxy
+        db_async_topology: true
+  - else:
+      setGlobals:
+        db_host: sqldb
+        db_async_topology: false      
+  - initGlobals
+  - setGlobals:
+      domain: ${settings.envName}-1.${globals.domain-1}
+  - createEnvs
+  - if (${settings.cf_addon:false}):
+    - script: |
+        var regions = '${settings.regions}'.split(','),
+            actions = [];
+        for (var cluster = 1, n = regions.length + 1; cluster < n; cluster ++) {
+          actions.push({
+            jps: "${baseUrl}/scripts/cloudflareManager.jps?_r=${fn.random}",
+            envName: "${settings.envName}-" + cluster,
+            settings: {
+              cf_auth_email: "${settings.cf_auth_email}",
+              cf_auth_key: "${settings.cf_auth_key}",
+              cf_zone_id: "${settings.cf_zone_id}",
+              cf_domain: "${settings.cf_domain}"
+            }
+          });
+        }
+        return { result: 0, onAfterReturn: { install: actions } };
+    - setGlobals:
+        domain: ${settings.cf_domain}
+    
+  - getEnvNodes
+  - installEnvsManager
+  
+  - if ('${globals.db_async_topology}' == 'true'):  
+    - install:
+      - jps: ${baseUrl}/scripts/asyncReplicationManager.jps
+        envName: ${settings.envName}-1
+        settings:
+          db_user: ${globals.db_user}
+          db_pass: ${globals.db_pass}
+          repl_user: ${globals.repl_user}
+          repl_pass: ${globals.repl_pass}
+          monitor_user: ${globals.monitor_user}
+          monitor_pass: ${globals.monitor_pass}        
+          cluster_name: ${settings.envName}
+        
+      - jps: ${baseUrl}/scripts/geoGlusterManager.jps
+        envName: ${globals.master_env_name}
+        settings:
+          install_gluster_cluster: true
+
+      - jps: ${baseUrl}/scripts/cacheManager.jps
+        envName: ${globals.master_env_name}
+        settings:
+          setup_cache_replication: true
+
+  - else:
+    - install:
+      - jps: ${baseUrl}/scripts/geoGaleraManager.jps
+        envName: ${globals.master_env_name}
+        settings:
+          install_galera_cluster: true
+        
+      - jps: ${baseUrl}/scripts/geoGlusterManager.jps
+        envName: ${globals.master_env_name}
+        settings:
+          install_gluster_cluster: true
+
+      - jps: ${baseUrl}/scripts/cacheManager.jps
+        envName: ${globals.master_env_name}
+        settings:
+          setup_cache_replication: true
+
+  - install-wordpress
+
+  - if ('${settings.le_addon:false}' == 'true'):
+    - setGlobals:
+        protocol: https      
+    - install:
+        jps: https://github.com/jelastic-jps/lets-encrypt/blob/stage/manifest.jps?_r=${fn.random}
+        envName: ${settings.envName}-1
+        nodeGroup: bl
+        skipEmail: true
+        settings:
+          customDomains: ${globals.domain}
+          fallbackToX1: true
+          webroot: true
+          webrootPath: /var/www/webroot/ROOT
+  - if ('${settings.cdn_addon:false}' == 'true'):
+    - install:
+        jps: https://raw.githubusercontent.com/edgeport/cdn/master/manifest.yml?_r=${fn.random}
+        envName: ${settings.envName}-1
+        nodeGroup: bl
+        skipEmail: true
+        settings:
+          note: ${settings.noteCDN:}
+  - install:
+      jps: ${baseUrl}/scripts/cacheManager.jps
+      envName: ${globals.master_env_name}
+      settings:
+        clean_cache: true
+
+actions:
+
+  initGlobals:
+    - script: |
+        var regions = '${settings.regions}'.split(','),
+            envGroups = eval('(' + MANIFEST + ')').envGroups, index,
+            onAfterReturn = { setGlobals: {} }, 
+            glbs = onAfterReturn.setGlobals,
+            resp, domain;
+        resp = jelastic.env.control.GetRegions(appid, session);
+        if (resp.result != 0) return resp;
+        resp = resp.array;
+        for (var i = 0, n = regions.length; i < n; i ++) {
+          index = i + 1;
+          glbs["region-" + index] = regions[i];
+          for (var a = 0, b = resp.length; a < b; a++) {
+            for (var k = 0, l = resp[a].hardNodeGroups.length; k < l; k++) {
+              if (resp[a].hardNodeGroups[k].uniqueName == regions[i])
+                glbs["domain-" + index] = resp[a].domain;
+            }
+          }
+          if (index == 1) {
+            glbs["displayName-" + index] = "WP Cluster Primary";
+            glbs["initial_env_master-" + index] = "true";
+          } else {
+            glbs["displayName-" + index] = "WP Cluster Secondary " + i;
+            glbs["initial_env_master-" + index] = "false";
+          }
+        }
+        glbs["envGroups"] = envGroups;
+        glbs["regionsCount"] = regions.length;
+        glbs["master_env_name"] = "${settings.envName}-1";
+        return { result: 0, onAfterReturn: onAfterReturn };
+
+  createEnvs:
+    - script: |
+        var regions = '${settings.regions}'.split(','),
+            actions = [];
+        for (var cluster = 1, n = regions.length + 1; cluster < n; cluster ++) {
+          actions.push({
+            jps: "${globals.wp_cluster_url}/manifest.yml?_r=${fn.random}",
+            envName: "${settings.envName}-" + cluster,
+            loggerName: "${settings.envName}-" + cluster,
+            envGroups: "${globals.envGroups}",
+            displayName: "${globals.displayName-" + cluster + "}",
+            region: "${globals.region-" + cluster + "}",
+            settings: {
+              waf: "${settings.waf}",
+              wp_protect: "${settings.wp_protect}",
+              le_addon: "false",
+              cdn_addon: "false",
+              is_install_wp: "false",
+              is_db_cluster: "false",
+              bl_count: "1",
+              ls_admin_pass: "${globals.ls_admin_pass}",
+              glusterfs: "true",
+              galera: "${globals.initial_env_master-" + cluster + "}",
+              db_user: "${globals.db_user}",
+              db_pass: "${globals.db_pass}",
+              db_async_topology: "${globals.db_async_topology}"
+            }  
+          });
+        }
+        return { result: 0, onAfterReturn: { install: actions } };
+
+  getEnvNodes:
+    - script: |
+        var regions = '${settings.regions}'.split(','),
+            onAfterReturn = { setGlobals: {} },
+            glbs = onAfterReturn.setGlobals;
+        for (var cluster = 1, n = regions.length + 1; cluster < n; cluster ++) {
+          var resp = jelastic.env.control.GetEnvInfo('${settings.envName}-' + cluster, session);
+          if (resp.result != 0) return resp;
+          for (var i = 0, k = resp.nodes; i < k.length; i++) {
+            if (k[i].nodeGroup == 'sqldb')
+              k[i].ismaster ? glbs["master_id_galera-" + cluster] = k[i].id : 0;
+            if (k[i].nodeGroup == 'bl') 
+              k[i].ismaster ? glbs["master_id_bl-" + cluster] = k[i].id : 0;
+            if (k[i].nodeGroup == 'cp') 
+              k[i].ismaster ? glbs["master_id_cp-" + cluster] = k[i].id : 0;
+          }
+        }
+        return { result: 0, onAfterReturn: onAfterReturn };
+
+  installEnvsManager:
+    script: |
+      var regions = '${settings.regions}'.split(','),
+          actions = [];
+      for (var cluster = 1, n = regions.length + 1; cluster < n; cluster ++) {
+        actions.push({
+          jps: "${baseUrl}/scripts/envManager.jps?_r=${fn.random}",
+          envName: "${settings.envName}-" + cluster,
+          settings: {
+              wp_cluster_url: "${globals.wp_cluster_url}",
+              db_cluster_url: "${globals.db_cluster_url}",
+              master_env_name: "${settings.envName}-1",
+              cluster_name: "${settings.envName}",
+              galera_server_id: "${globals.galera_server_id}",
+              galera_segment_id: cluster,
+              db_user: "${globals.db_user}",
+              db_pass: "${globals.db_pass}",
+              ls_admin_pass: "${globals.ls_admin_pass}",
+              envName: "${settings.envName}"
+          }
+        });
+      }
+      return { result: 0, onAfterReturn: { install: actions } };
+
+  install-wordpress:
+    - install: ${globals.wp_cluster_url}/scripts/installWP.jps
+      envName: ${globals.master_env_name}
+      settings:
+        db_host: ${globals.db_host}
+        db_user: ${globals.db_user}
+        db_pass: ${globals.db_pass}
+        wp_admin_pass: ${globals.wp_admin_pass}
+        wp_title: "Hello World"
+        wp_url: ${globals.protocol}://${globals.domain}    
+  
+success:
+  email: success/email/${globals.regionsCount}-region-${globals.email}.md?_r=${fn.random}
+  text: success/text/${globals.regionsCount}-region-${globals.success}.md?_r=${fn.random}
+
+startPage: ${globals.protocol}://${globals.domain}/

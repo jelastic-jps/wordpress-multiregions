@@ -1,0 +1,47 @@
+jpsType: update
+id: cloudflare-manager-addon
+name: CloudFlare Manager Add-on
+description: CloudFlare Manager Add-on
+
+globals:
+  cf_auth_email: ${settings.cf_auth_email}
+  cf_auth_key: ${settings.cf_auth_key:34a8fac9c746885ee63c167099802fdef2c14}
+  cf_zone_id: ${settings.cf_zone_id:b376649b6d17bf730ca9326f9985fd31}
+  cf_domain: ${settings.cf_domain}
+
+onBeforeDelete:
+  deleteRecord:
+    extIP: ${nodes.bl.master.extIPs}
+    
+onBeforeDetachExtIp:
+  deleteRecord:
+    extIP: ${nodes.bl.master.extIPs}
+
+onAfterAttachExtIp:
+  addRecord:
+    extIP: ${nodes.bl.master.extIPs}
+  
+onInstall:
+
+  - addRecord:
+      extIP: ${nodes.bl.master.extIPs}
+
+actions:
+  addRecord:
+    - cmd[${nodes.bl.master.id}]: |-
+        curl -X POST "https://api.cloudflare.com/client/v4/zones/${globals.cf_zone_id}/dns_records/" \
+        -H "X-Auth-Email: ${globals.cf_auth_email}" \
+        -H "X-Auth-Key: ${globals.cf_auth_key}" \
+        -H "Content-Type: application/json" \
+        --data '{"type":"A","name":"${globals.cf_domain}","content":"${this.extIP}","proxied":'false',"ttl":'1'}' | python -m json.tool;
+  deleteRecord:
+    - cmd[${nodes.bl.master.id}]: |-
+        curl -s -X GET "https://api.cloudflare.com/client/v4/zones/${globals.cf_zone_id}/dns_records?type=A&content=${this.extIP}" \
+        -H "X-Auth-Email: ${globals.cf_auth_email}" \
+        -H "X-Auth-Key: ${globals.cf_auth_key}" \
+        -H "Content-Type: application/json" | grep -Po '(?<="id":")[^"]*';
+    - cmd[${nodes.bl.master.id}]: |-
+        curl -X DELETE "https://api.cloudflare.com/client/v4/zones/${globals.cf_zone_id}/dns_records/${response.out}" \
+        -H "X-Auth-Email: ${globals.cf_auth_email}" \
+        -H "X-Auth-Key: ${globals.cf_auth_key}" \
+        -H "Content-Type: application/json" | python -m json.tool;

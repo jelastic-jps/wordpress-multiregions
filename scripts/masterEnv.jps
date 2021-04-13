@@ -1,0 +1,114 @@
+jpsType: update
+id: wordpress-multiregion-master-manager-addon
+name: WordPress Multiregion Master Manager Add-on
+description: WordPress Multiregion Master Manager Add-on
+baseUrl: https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregions/master
+
+onBeforeStop:
+  - forEach(i:nodes.sqldb):
+      env.control.StopNode [${@i.id}]
+
+onAfterBindSSL:
+  - importGlobalsFromNodeGroup: bl
+  - getClusterEnvs
+  - shareCertificates
+    
+onAfterInstallAddon [nodeGroup:bl, id:cdn]:
+  - getClusterEnvs
+  - installCDN
+  - install: https://raw.githubusercontent.com/jelastic-jps/wordpress-cluster/v3.0.0/scripts/setupCDN.jps
+ 
+onAfterInstallAddon [nodeGroup:bl, id:letsencrypt-ssl-addon]:
+  - importGlobalsFromNodeGroup: bl
+  - setupLEdomain
+
+onInstall:
+  - getClusterEnvs
+  - setupLEwebroot
+  - setupRedirects
+
+actions:
+  setupLEwebroot:
+    - cmd[cp, bl]: |-
+        [ ! -d /var/lib/jelastic/keys/letsencrypt ] && mkdir -p /var/lib/jelastic/keys/letsencrypt;
+        echo "webroot=true" > /var/lib/jelastic/keys/letsencrypt/settings-custom;
+        echo "webrootPath=/var/www/webroot/ROOT" >> /var/lib/jelastic/keys/letsencrypt/settings-custom;
+      user: root
+
+  setupLEdomain:
+    - cmd[${nodes.cp.master.id}]: source /opt/letsencrypt/settings && echo $domain
+    - install: ${globals.wp_cluster_url}/scripts/setupDomain.jps
+      settings:
+        domain: https://${response.out}
+  
+  setupRedirects:
+    - script: |
+        var envs = '${globals.clusterEnvs}'.split(','),
+            actions = [];
+        for (var i = 0, n = envs.length; i < n; i ++) {
+          actions.push({
+            jps: "${baseUrl}/scripts/redirects.jps?_r=${fn.random}",
+            envName: envs[i],
+            settings: {
+              master_ip: "${nodes.cp.master.address}"
+            }  
+          });
+        }
+        return { result: 0, onAfterReturn: { install: actions } };
+  
+  shareCertificates:
+    - api: env.file.Read
+      path:  /var/lib/jelastic/SSL/customssl.conf
+      nodeId: ${nodes.bl.master.id} 
+    - customSSLconf: ${response.body}
+      script: |
+        var envs = '${globals.clusterEnvs}'.split(','),
+            actions = [];
+        for (var i = 0, n = envs.length; i < n; i ++) {
+          if (envs[i] != "${globals.master_env_name}"){
+            actions.push({
+              jps: "${baseUrl}/scripts/shareSSL.jps?_r=${fn.random}",
+              envName: envs[i],
+              settings: {
+                customSSLconf: customSSLconf
+              }  
+            });
+          }
+        }
+        return { result: 0, onAfterReturn: { install: actions } };
+
+  getClusterEnvs:
+    - script: ${baseUrl}/scripts/getClusterEnvs.js
+      envName: ${env.envName}
+    - setGlobals:
+        nextIndex: ${response.nextIndex}
+        clusterEnvs: ${response.items.join(,)}
+        
+  importGlobalsFromNodeGroup:
+    - script: |
+        var resp = api.env.control.GetNodeGroups("${env.name}", session);
+        if (resp.result != 0) return resp;
+        var groups = resp.object, globals;
+        for (var i = 0, n = groups.length; i < n; i++)
+          if (groups[i].name == "${this}" && groups[i].globals) {
+            globals = new org.yaml.snakeyaml.Yaml().load(groups[i].globals);
+            break;
+          }
+        return { result: 0, onAfterReturn: { setGlobals: globals } };
+   
+  installCDN:
+    script: |
+      var envs = '${globals.clusterEnvs}'.split(','),
+          actions = [];
+      for (var i = 0, n = envs.length; i < n; i ++) {
+        if (envs[i] != "${env.envName}"){
+          actions.push({
+            jps: "${baseUrl}/scripts/cdn.jps?_r=${fn.random}",
+            envName: envs[i],
+            settings: {
+              masterEnv: "${env.envName}"
+            }  
+          });
+        }
+      }
+      return { result: 0, onAfterReturn: { install: actions } };

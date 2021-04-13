@@ -1,0 +1,155 @@
+jpsType: update
+id: wordpress-multiregion-new-slave-adding
+name: WordPress Multiregion New Slave Adding
+description: WordPress Multiregion New Slave Adding
+baseUrl: https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregions/master
+
+settings:
+  fields:
+    - caption: Regions
+      type: regionlist
+      name: regions
+      disableInactive: true
+      selectFirstAvailable: true
+      multiSelect: false
+      filter:
+        isActive: true
+
+globals:
+  wp_cluster_url: https://raw.githubusercontent.com/jelastic-jps/wordpress-cluster/v3.0.0
+
+onInstall:
+  - getClusterEnvs
+  - importGlobalsFromNodeGroup: bl
+  - createSlaveEnv
+  - installEnvManager
+  - initialNewGaleraCluster
+  - getClusterEnvs
+  - addNewGaleraCluster
+  - sequentialRestartGaleraClusters
+  
+actions:
+  getClusterEnvs:
+    - script: ${baseUrl}/scripts/getClusterEnvs.js
+      envName: ${env.name}
+    - setGlobals:
+        nextIndex: ${response.nextIndex}
+        clusterEnvs: ${response.items.join(,)}
+
+  importGlobalsFromNodeGroup:
+    - script: |
+        var resp = api.env.control.GetNodeGroups("${env.name}", session);
+        if (resp.result != 0) return resp;
+        var groups = resp.object, globals;
+        for (var i = 0, n = groups.length; i < n; i++)
+          if (groups[i].name == "${this}" && groups[i].globals) {
+            globals = new org.yaml.snakeyaml.Yaml().load(groups[i].globals);
+            break;
+          }
+        return { result: 0, onAfterReturn: { setGlobals: globals } };
+
+  createSlaveEnv:  
+    - script: |
+        var actions = [];
+        actions.push({
+          jps: "${globals.wp_cluster_url}/manifest.yml?_r=${fn.random}",
+          envName: "${globals.envName}-" + "${globals.nextIndex}",
+          loggerName: "${globals.envName}-" + "${globals.nextIndex}",
+          displayName: "WP Cluster Slave " + "${globals.nextIndex}",
+          envGroups: eval('(' + MANIFEST + ')').envGroups,
+          region: 'vz7',
+          settings: {
+            waf: "${globals.waf}",
+            wp_protect: "${globals.wp_protect}",
+            le_addon: "false",
+            cdn_addon: "false",
+            is_install_wp: "false",
+            is_db_cluster: "false",
+            bl_count: "1",
+            ls_admin_pass: "${globals.ls_admin_pass}",
+            glusterfs: "true",
+            galera: "false",
+            db_user: "${globals.db_user}",
+            db_pass: "${globals.db_pass}"
+          }  
+        });
+        return { result: 0, onAfterReturn: { install: actions } };
+        
+  installEnvManager:
+    install:
+      jps: ${baseUrl}/scripts/slaveEnvManager.jps?_r=${fn.random}
+      envName: ${globals.envName}-${globals.nextIndex}
+      settings:
+        wp_cluster_path: ${globals.wp_cluster_path}
+        master_env_name: ${globals.master_env_name}
+        galera_server_id: ${globals.galera_server_id}
+        db_user: ${globals.db_user}
+        db_pass: ${globals.db_pass}
+        ls_admin_pass: ${globals.ls_admin_pass}
+        regionsCount: ${globals.regionsCount}
+        envName: ${globals.envName}
+        master_id_glusterfs: ${globals.master_id_glusterfs}
+
+  initialNewGaleraCluster:
+    - install:
+        jps: https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregions/master/scripts/geo_galera.jps?_r=${fn.random}
+        envName: ${globals.envName}-${globals.nextIndex}
+        settings:
+          path: https://raw.githubusercontent.com/jelastic-jps/mysql-cluster/v2.3.0
+          server_id: ${globals.galera_server_id}
+          segment_id: ${globals.nextIndex}
+          db_user: ${globals.db_user}
+          db_pass: ${globals.db_pass}
+          setup_galera_cluster: true
+          initial_galera_master: false
+          initial_galera_slave: false
+          galera_nodes_array: galera_nodes_address
+
+  addNewGaleraCluster:
+    - script: |
+        var envs = '${globals.clusterEnvs}'.split(','),
+            actions = [],
+            galera_nodes_address = "";
+        for (var i = 0, n = envs.length; i < n; i ++) {
+          var resp = jelastic.env.control.GetEnvInfo(envs[i], session);
+          if (resp.result != 0) return resp;
+          for (var l = 0, k = resp.nodes; l < k.length; l++) {
+            if (k[l].nodeGroup == 'sqldb') {
+              galera_nodes_address += k[l].address + ",";
+            }
+          }
+        }
+        galera_nodes_address = galera_nodes_address.slice(0, -1);
+        for (var i = 0, n = envs.length; i < n; i ++) {
+          actions.push({
+            jps: "https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregions/master/scripts/geo_galera.jps?_r=${fn.random}",
+            envName: envs[i],
+            settings: {
+              path: "https://raw.githubusercontent.com/jelastic-jps/mysql-cluster/v2.3.0",
+              server_id: "${globals.galera_server_id}",
+              segment_id: "${globals.nextIndex}",
+              db_user: "${globals.db_user}",
+              db_pass: "${globals.db_pass}",
+              setup_galera_cluster: "false",
+              initial_galera_master: "false",
+              initial_galera_slave: "false",
+              setup_instance: "true",
+              galera_nodes_array: galera_nodes_address
+            }  
+          });
+        }
+        return { result: 0, onAfterReturn: { install: actions } };
+        
+  sequentialRestartGaleraClusters:
+   script: |
+      var envs = '${globals.clusterEnvs}'.split(','),
+            api = [];
+      for (var i = 0, n = envs.length; i < n; i ++) {
+        api.push({
+          method: "env.control.RestartNodes",
+            envName: envs[i],
+            nodeGroup: "sqldb",
+            isSequential: "true"
+        });
+      }
+      return { result: 0, onAfterReturn: { api: api, sync: true } }

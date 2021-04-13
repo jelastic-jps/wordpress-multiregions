@@ -1,1 +1,1 @@
-# wordpress-multiregion
+# wordpress-multiregions

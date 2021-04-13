@@ -1,0 +1,88 @@
+jpsType: update
+id: geo-galera-cluster
+name: MariaDB Geo-Galera Cluster
+description: MariaDB Geo-Galera  Cluster
+
+globals:
+  path: "${settings.path}"
+  galera_server_id: "${settings.galera_server_id}"
+  galera_segment_id: "${settings.galera_segment_id}"
+  db_user: "${settings.db_user}"
+  db_pass: "${settings.db_pass}"
+  cluster_name: geo-galera-cluster
+  galera_nodes_array: ${settings.galera_nodes_array}
+  install_galera_cluster: ${settings.install_galera_cluster:false}
+  bootstrap_galera_cluster: ${settings.bootstrap_galera_cluster:false}
+  start_galera_cluster: ${settings.start_galera_cluster:false}
+  setup_instance: ${settings.setup_instance:false}
+  galera_conf: "/etc/mysql/conf.d/galera.cnf"
+    
+onInstall:
+  - if ('${globals.install_galera_cluster}' == 'true'):
+    - initialSetup
+    - setupInstance
+    - forEach(k:nodes.sqldb):
+        setupBindAddress:
+          id: ${@k.id}
+          ip: ${@k.address}
+    - cmd[sqldb]: sudo jem service stop
+ 
+  - if ('${globals.setup_instance}' == 'true'): setupInstance
+  
+  - if ('${globals.bootstrap_galera_cluster}' == 'true'): bootstrapGaleraCluster
+  
+  - if ('${globals.start_galera_cluster}' == 'true'): startGaleraCluster  
+    
+actions:
+  initialSetup:
+    - setupUser:
+    - setNodeDisplayName[sqldb]: Galera
+    - cmd[sqldb]: |-
+        wget ${globals.path}/scripts/mysql -O /etc/init.d/mysql &>> /var/log/run.log
+        systemctl enable sendmail; service sendmail start;
+      user: root
+    - cmd[sqldb]: |-
+        wget ${globals.path}/scripts/wsrep-notify.sh -O /var/lib/jelastic/bin/wsrep-notify.sh &>> /var/log/run.log
+        wget ${globals.path}/configs/galera.cnf -O ${globals.galera_conf} &>> /var/log/run.log
+        chmod 700 /var/lib/jelastic/bin/wsrep-notify.sh &>> /var/log/run.log
+        
+  setupUser:
+    cmd[sqldb]: |-
+      wget ${globals.path}/scripts/setupUser.sh -O ~/setupUser.sh &>> /var/log/run.log
+      bash ~/setupUser.sh ${globals.db_user} ${globals.db_pass} &>> /var/log/run.log
+    user: root
+
+  setupInstance:
+    cmd[sqldb]: |-
+      sed -i "s/server_id.*/server_id = ${globals.galera_server_id}/" ${globals.galera_conf}
+      sed -i "s/wsrep_cluster_name.*/wsrep_cluster_name = ${globals.cluster_name}/" ${globals.galera_conf}
+      sed -i "s/wsrep_cluster_address.*/wsrep_cluster_address = gcomm:\/\/${globals.galera_nodes_array}/" ${globals.galera_conf}
+  
+  setupBindAddress:
+    cmd[${this.id}]: |-
+      sed -i "s/bind-address.*/bind-address = ${this.ip}/" ${globals.galera_conf}
+      sed -i "s/wsrep_node_address.*/wsrep_node_address = ${this.ip}/" ${globals.galera_conf}
+      sed -i "s/report_host.*/report_host = ${this.ip}/" ${globals.galera_conf}
+      sed -i "s/wsrep_node_name.*/wsrep_node_name = ${this.ip}/" ${globals.galera_conf}
+      echo "wsrep_provider_options = \"gmcast.segment=${globals.galera_segment_id}; evs.send_window=512; evs.user_send_window=512; evs.inactive_check_period=PT2S\"" >> ${globals.galera_conf}
+      echo "wsrep_dirty_reads = ON" >> ${globals.galera_conf}
+
+  bootstrapGaleraCluster:
+    - cmd[${nodes.sqldb.master.id}]: |-
+        sudo jem service stop; 
+        echo 'safe_to_bootstrap: 1' > /var/lib/mysql/grastate.dat; 
+        sudo jem service start;
+    - forEach(n:nodes.sqldb):
+        if (!${@n.ismaster}):
+          cmd[${@n.id}]: |-
+            sudo jem service stop; 
+            echo 'safe_to_bootstrap: 0' > /var/lib/mysql/grastate.dat; 
+            sudo jem service start;
+  
+  startGaleraCluster:
+    - forEach(n:nodes.sqldb):
+        cmd[${@n.id}]: |-
+          sudo jem service stop; 
+          echo 'safe_to_bootstrap: 0' > /var/lib/mysql/grastate.dat; 
+          sudo jem service start;
+

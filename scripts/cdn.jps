@@ -1,0 +1,12 @@
+jpsType: update
+id: wordpress-multiregion-cdn
+name: WordPress Multiregion CDN
+description: WordPress Multiregion CDN
+
+onInstall:
+  - install: https://raw.githubusercontent.com/edgeport/cdn/master/manifest.yml?_r=${fn.random}
+    nodeGroup: bl
+    skipEmail: true
+    settings:
+      note: ${settings.noteCDN:}
+      masterEnv: ${settings.masterEnv}

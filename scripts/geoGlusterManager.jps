@@ -1,0 +1,204 @@
+jpsType: update
+id: geo-glusterfs-cluster
+name: Geo GlusterFS Cluster
+description: Geo GlusterFS Cluster
+baseUrl: https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregions/master
+
+globals:
+  install_gluster_cluster: ${settings.install_gluster_cluster:false}
+  update_cluster: ${settings.update_gluster_cluster:false}
+  add_new_cluster: ${settings.add_new_cluster:false}
+  master_env_name: ${settings.master_env_name}
+  new_env: ${settings.new_env}
+  glusterfs_slaves_address: ${settings.glusterfs_slaves_address}
+
+onInstall:
+
+  - getClusterEnvs
+  - importGlobalsFromNodeGroup: bl
+  - getGlusterSlaveAddress
+  - if ('${globals.install_gluster_cluster}' == 'true'):
+    - generateSSHkey  
+    - setupGeoGlusterFS
+    - addSlaveGlusterFS
+
+  - if ('${globals.update_galera_cluster}' == 'true'):
+      - getClusterEnvs
+      - setCustomGlobals
+      - resetCluster
+      - if ('${env.envName}' == '${globals.master_env_name}'):
+          - disableMountbroker
+          - initialMasterGlusterFSCluster
+      - setupGeoGlusterFS
+      - addSlaveGlusterFS
+
+  - if ('${globals.add_new_cluster}' == 'true'):
+      - setGlobals:
+          clusterEnvs: ${globals.new_env}
+      - installRequiredPackages
+      - setupGeoGlusterFS
+      - addSlaveGlusterFS
+
+actions:
+
+  getClusterEnvs:
+    - script: ${baseUrl}/scripts/getClusterEnvs.js
+      envName: ${env.envName}
+    - setGlobals:
+        nextIndex: ${response.nextIndex}
+        clusterEnvs: ${response.items.join(,)}
+
+  importGlobalsFromNodeGroup:
+    - script: |
+        var resp = api.env.control.GetNodeGroups("${env.name}", session);
+        if (resp.result != 0) return resp;
+        var groups = resp.object, globals;
+        for (var i = 0, n = groups.length; i < n; i++)
+          if (groups[i].name == "${this}" && groups[i].globals) {
+            globals = new org.yaml.snakeyaml.Yaml().load(groups[i].globals);
+            break;
+          }
+        return { result: 0, onAfterReturn: { setGlobals: globals } };
+
+  disableMountbroker:
+    - api: env.control.ExecCmdByGroup
+      envName: ${globals.master_env_name}
+      nodeGroup: storage
+      commandList:
+        - command: |-
+            gluster-mountbroker delete jelastic geoaccount;    
+
+  installRequiredPackages:
+   - script: |
+        var envs = '${globals.clusterEnvs}'.split(','),
+            actions = [];
+        for (var i = 0, n = envs.length; i < n; i ++) {
+          actions.push({
+            jps: "${baseUrl}/scripts/geoGluster.jps?_r=${fn.random}",
+            envName: envs[i],
+            settings: {
+              install_required_packages: "true"
+            }  
+          });
+        }
+        return { result: 0, onAfterReturn: { install: actions } };
+
+  initialSlaveGlusterFSCluster:
+    - script: |
+        var envs = '${globals.clusterEnvs}'.split(','),
+            actions = [];
+        for (var i = 0, n = envs.length; i < n; i ++) {
+          if (envs[i] != "${globals.master_env_name}") {
+            actions.push({
+              jps: "${baseUrl}/scripts/geoGluster.jps?_r=${fn.random}",
+              envName: envs[i],
+              settings: {
+                initial_glusterfs_slave: "true"
+              }
+            });
+          }
+        }
+        return { result: 0, onAfterReturn: { install: actions } };
+
+  initialMasterGlusterFSCluster:
+    - install:
+        jps: ${baseUrl}/scripts/geoGluster.jps?_r=${fn.random}
+        envName: ${globals.master_env_name}
+        settings:
+          initial_glusterfs_master: true
+        
+  generateSSHkey:
+    - api: env.control.ExecCmdById
+      envName: ${globals.master_env_name}
+      nodeId: ${nodes.storage.master.id}
+      commandList:
+        - command: |-
+            rm -f /root/.ssh/id_rsa*;
+            echo -e "\n"|ssh-keygen -t rsa -N "";
+
+  setupGeoGlusterFS:
+    - api: env.file.Read
+      path: /root/.ssh/id_rsa.pub
+      envName: ${globals.master_env_name}
+      nodeId: ${nodes.storage.master.id}
+    - sshPubKey: ${response.body}
+      script: |
+        var envs = '${globals.clusterEnvs}'.split(','),
+            actions = [];
+        for (var i = 0, n = envs.length; i < n; i ++) {
+          if (envs[i] == "${globals.master_env_name}"){
+            actions.push({
+              jps: "${baseUrl}/scripts/geoGluster.jps?_r=${fn.random}",
+              envName: envs[i],
+              settings: {
+                install_required_packages: true,
+                setup_glusterfs_cluster: true,
+                sshPubKey: sshPubKey,
+                initial_glusterfs_master: true,
+                initial_glusterfs_slave: false
+              }
+            });
+          } else {
+            actions.push({
+              jps: "${baseUrl}/scripts/geoGluster.jps?_r=${fn.random}",
+              envName: envs[i],
+              settings: {
+                install_required_packages: true,
+                setup_glusterfs_cluster: true,
+                sshPubKey: sshPubKey,
+                initial_glusterfs_master: true,
+                initial_glusterfs_slave: true
+              }  
+            });
+          }
+        }
+        return { result: 0, onAfterReturn: { install: actions } };
+
+    - api: env.file.Read
+      path: /var/lib/glusterd/geo-replication/common_secret.pem.pub
+      envName: ${globals.master_env_name}
+      nodeId: ${nodes.storage.master.id}
+    - commonPubKey: ${response.body}
+      script: |
+        var envs = '${globals.clusterEnvs}'.split(','),
+            actions = [];
+        for (var i = 0, n = envs.length; i < n; i ++) {
+            actions.push({
+              jps: "${baseUrl}/scripts/geoGluster.jps?_r=${fn.random}",
+              envName: envs[i],
+              settings: {
+                addCommonPubKey: true,
+                commonPubKey: commonPubKey
+              }  
+            });
+        }
+        return { result: 0, onAfterReturn: { install: actions } };
+
+  addSlaveGlusterFS:
+    - forEach (slave:globals.glusterfs_slaves_address):
+      - api: env.control.ExecCmdById
+        envName: ${globals.master_env_name}
+        nodeId: ${nodes.storage.master.id}
+        commandList:
+          - command: |-
+              gluster volume geo-replication jelastic jelastic@${@slave}::jelastic create push-pem force
+              gluster volume geo-replication jelastic jelastic@${@slave}::jelastic start
+
+  getGlusterSlaveAddress:
+    - script: |
+        var envs = '${globals.clusterEnvs}'.split(','),
+            glusterfs_slaves_address = [],
+            onAfterReturn = { setGlobals: {} },
+            glbs = onAfterReturn.setGlobals;
+        for (var i = 0, n = envs.length; i < n; i ++) {
+          if (envs[i] != "${globals.master_env_name}"){
+            var resp = jelastic.env.control.GetEnvInfo(envs[i], session);
+            if (resp.result != 0) return resp;
+            for (var l = 0, k = resp.nodes; l < k.length; l++) {
+              if ((k[l].nodeGroup == 'storage') && (k[l].ismaster))
+                glusterfs_slaves_address.push(k[l].address);
+            }
+          }
+        }
+        glbs["glusterfs_slaves_address"] = glusterfs_slaves_address;
+        return { result: 0, onAfterReturn: onAfterReturn };

@@ -1,0 +1,47 @@
+jpsType: update
+id: wordpress-multiregion-cache-addon
+name: WordPress Multiregion Cache Add-on
+description: WordPress Multiregion Cache Add-on
+
+globals:
+  setup_cache_replication: ${settings.setup_cache_replication:false}
+  clean_cache: ${settings.clean_cache:false}
+  bl_nodes_address: ${settings.bl_nodes_address}
+
+onInstall:
+  - if ('${globals.setup_cache_replication}' == 'true'):
+    - script[bl]: firewallRules.js?_r=${fn.random}
+      ports: '1447'
+      name: LSADC-HA
+
+    - resetReplClusters
+    - forEach(i:nodes.bl):
+      - setupInstance:
+          id: ${@i.id}
+          ip: ${@i.address}
+          bl_nodes_address: ${globals.bl_nodes_address}
+
+  - if ('${globals.clean_cache}' == 'true'): cleanCache
+
+actions:
+  cleanCache:
+    - cmd[bl]: rm -rf /tmp/lscache/vhosts/Jelastic/*;
+    - forEach(nodes.cp):
+      - cmd[${@i.id}]: |-
+          cd /var/www/webroot/ROOT; wp cache flush --path=${SERVER_WEBROOT} &>> /var/log/run.log;
+          cd /var/www/webroot/ROOT; wp litespeed-purge all --path=${SERVER_WEBROOT} &>> /var/log/run.log;
+          sudo jem service restart;
+          
+  resetReplClusters:
+    cmd[bl]: |-
+      echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" >  /var/www/conf/ha_config.xml;
+      echo "<haConfig/>" >>  /var/www/conf/ha_config.xml;
+      sudo jem service restart;
+  
+  setupInstance:
+    cmd[${this.id}]: |-
+      /usr/bin/xmlstarlet ed --inplace -s "haConfig"  -t elem -n "replication" "/var/www/conf/ha_config.xml" 2>/dev/null;
+      /usr/bin/xmlstarlet ed --inplace -s "haConfig/replication"  -t elem -n "serverAddr" -v "${this.ip}:1447" "/var/www/conf/ha_config.xml" 2>/dev/null;
+      /usr/bin/xmlstarlet ed --inplace -s "haConfig/replication"  -t elem -n "isFileCached" -v "1" "/var/www/conf/ha_config.xml" 2>/dev/null;
+      /usr/bin/xmlstarlet ed --inplace -s "haConfig/replication" -t elem -n "replCluster" -v "${this.bl_nodes_address}" "/var/www/conf/ha_config.xml" 2>/dev/null;
+      sudo jem service restart;
