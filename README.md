@@ -1,3 +1,7 @@
+<p align="left"> 
+<img src="images/dark-back.svg" width="100">
+</p>
+
 # Highly Available Multi-Region WordPress Cluster
 
 Out-of-the-Box Enterprise WordPress Cluster with extra High Availability that can withstand to even cloud datacentre failure
