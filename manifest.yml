@@ -6,9 +6,8 @@ categories:
   - apps/clusters
   - apps/content-management
 description: 
-  text: Highly-available and reliable WordPress cluster setup with multi-regional distribution. 
-    The package creates interconnected WordPress instances (sub clusters) across several availability zones ensuring the highest uptime and lowest latency.
-  short: Enterprise-grade WordPress Cluster with servers in multiple regions.
+  text: Highly-available and reliable WordPress cluster setup with automatic multi-region distribution. The package creates interconnected WordPress sub clusters across several availability zones ensuring the highest uptime and lowest latency.
+  short: Enterprise-grade WordPress Cluster with automatic distribution across multiple regions.
 logo: https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregions/master/images/82dark-back-01.svg
 baseUrl: https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregions/master
 
@@ -26,7 +25,7 @@ settings:
       max: 5
       filter:
         isActive: true
-      tooltip: <h3>Select destination regions.</h3> The first region selected should have the highest performance. It will host a primary cluster.
+      tooltip: <h3>Select the destination regions</h3> The first selected region will host a primary cluster, so it should have the highest performance.
 
     - caption: Environment
       type: envname
@@ -67,19 +66,24 @@ settings:
         maxWidth: 600
       values:        
           - value: async
-            caption: Async Master-Master Replication Topology 
-            tooltip: <h2>Master-Master with Extra Slaves</h2> 
-                     Pre-configured asynchronous replication with two interconnected<br> master databases and one slave.<br>
-                     This topology is recommended when <b>Latency</b> between regions more than <b>20ms</b>.<br>
-                     Master node at Region 1 acts as Global master.<br> 
-                     Master node at Region 2 acts as Backup of Global master.<img width='587' height='500' src='https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregions/master/images/wp-geo-mm-white.svg'>" 
+            caption: Async Primary/Replica Distribution 
+            tooltip: <h2>Primary Replication with Extra Replicas</h2> 
+                     Pre-configured asynchronous replication with two interconnected<br> primary databases and one secondary replica.<br>
+                     This topology is recommended when <b>Latency</b> between regions is more than <b>20ms</b>.<br>
+                     - Primary node at Region 1 performs writes and reads operations<br>
+                     - Primary node at Region 2 by default performs reads operations but starts handling writes if initial primary database becomes unavailable<br>
+                     - Replica node at Region 3 is used for reads operations only<br>
+                       <img width='587' height='500' src='https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregions/master/images/wp-geo-mm-white.svg'>" 
 
           - value: sync
-            caption: Sync Galera Cluster Replication Topology
+            caption: Sync Galera Distribution
             tooltip: <h2>Galera Cluster</h2>
                      All servers can accept updates even if being issued concurrently.<br>
                      This topology is recommended when <b>Latency</b> between regions is less than <b>20ms</b><br>
-                     <img width='580' height='500' src='https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregions/master/images/wp-geo-galera-white.svg?sanitize=true'>
+                     - Region 1 includes 3 primary database nodes<br>
+                     - Region 2 and 3 each includes 2 primary database nodes<br>
+                     - All Galera Cluster nodes perform reads and writes operation<br>
+                      <img width='580' height='500' src='https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregions/master/images/wp-geo-galera-white.svg?sanitize=true'>
 
     - caption: Advanced Features
       type: displayfield
@@ -91,21 +95,21 @@ settings:
       name: wp_protect
       value: true
       disabled: false
-      tooltip: "Secure WordPress Admin Panel with <a href='https://www.litespeedtech.com/support/wiki/doku.php/litespeed_wiki:config:wordpress-protection'>LiteSpeed Brute Force Protection</a> that limits failed login attempts. Default action is <b>Throttle</b> and number of allowed attempts is <b>100</b>"
+      tooltip: "Secure WordPress Admin Panel with <a href='https://www.litespeedtech.com/support/wiki/doku.php/litespeed_wiki:config:wordpress-protection'>LiteSpeed Brute Force Protection</a> that limits failed login attempts. Default action is <b>Throttle</b> and number of allowed attempts is <b>100</b>."
 
     - caption: Web Application Firewall
       type: checkbox
       name: waf
       value: true
       disabled: false
-      tooltip: "Protect web sites with <a href='https://www.litespeedtech.com/support/wiki/doku.php/litespeed_wiki:waf'>LiteSpeed built-in WAF</a> based on Free ModSecurity Rules from Comodo"
+      tooltip: "Protect web sites with <a href='https://www.litespeedtech.com/support/wiki/doku.php/litespeed_wiki:waf'>LiteSpeed built-in WAF</a> based on Free ModSecurity Rules from Comodo."
 
     - caption: Install Let's Encrypt SSL with Auto-Renewal
       type: checkbox
       name: le_addon
       value: false
       disabled: true
-      tooltip: "Advanced integration with Let's Encrypt certificate authority that simplifies and automates the process of issuing, configuring and updating trusted custom SSL certificates."
+      tooltip: "Advanced integration with Let's Encrypt certificate authority that simplifies and automates the process of issuing, configuring and renewing trusted SSL certificates."
 
     - caption: Install Lightning-Fast Premium CDN with 160+ PoPs
       type: checkbox
@@ -120,7 +124,7 @@ settings:
       value: false
       disabled: false
       hidden: false
-      tooltip: "CloudFlare registration"
+      tooltip: "Automated <a href='https://docs.jelastic.com/custom-domains/'>custom domain</a> registration at <a href='https://www.cloudflare.com/products/registrar/'>CloudFlare Registrar</a>."
       showIf:
         true:
           - caption: CloudFlare Auth Email
