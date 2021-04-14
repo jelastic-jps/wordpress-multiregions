@@ -8,7 +8,7 @@ Out-of-the-Box Enterprise WordPress Cluster with extra High Availability that ca
 
 ## Cluster Components
 
-Upon the package installation, new environments will be created, One environment per one [Region](https://docs.jelastic.com/environment-regions). Number of Regions may vary between 3 and 5.
+Upon the package installation, new environments will be created, one environment per one [Region](https://docs.jelastic.com/environment-regions). Number of Regions may vary between 3 and 5.
 
 Each environment comprises the software stacks as follows:  
 
@@ -40,16 +40,16 @@ In the opened confirmation window at Jelastic dashboard, choose:
 
 * preconfigured horizontal **Scaling Strategy**   
 
-* **Database Topology** depending on connection latency value between Regions. In case latency is less than 20 ms we recommend to use **[Sync Galera Cluster replication topology](https://jelastic.com/blog/mariadb-galera-cluster-replication/)**, otherwise use **[Async Master-Slave replication topology](https://jelastic.com/blog/master-master-slave-replication-mysql-mariadb-auto-clustering/)**. This option will affect the whole solution topology:
+* **Database Topology** depending on connection latency value between Regions. In case latency is less than 20 ms we recommend to use **[Sync Galera Distribution](https://jelastic.com/blog/mariadb-galera-cluster-replication/)**, otherwise use **[Async Primary/Replica Distribution](https://jelastic.com/blog/master-master-slave-replication-mysql-mariadb-auto-clustering/)**. This option will affect the whole solution topology:
 
-    * Galera Cluster
+    * Sync Galera
 <p align="left"> 
-<img src="images/Cluster WP 1.svg" width="600">
+<img src="images/wp-geo-galera-black.svg" width="600">
 </p>
     
-    * Master-Master
+    * Async Primary/Replica
 <p align="left"> 
-<img src="images/Cluster WP 2.svg" width="600">
+<img src="images/wp-geo-mm-black.svg" width="600">
 </p>
       
 * **WordPress Brute Force Attack Protection** option will protect WordPress admin panel  
