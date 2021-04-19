@@ -44,12 +44,12 @@ In the opened confirmation window at Jelastic dashboard, choose:
 
     * Sync Galera
 <p align="left"> 
-<img src="images/wp-geo-galera-black.svg" width="600">
+<img src="images/wp-geo-galera-black-1-bl.svg" width="600">
 </p>
     
     * Async Primary/Replica
 <p align="left"> 
-<img src="images/wp-geo-mm-black.svg" width="600">
+<img src="images/wp-geo-mm-black-1-bl.svg" width="600">
 </p>
       
 * **WordPress Brute Force Attack Protection** option will protect WordPress admin panel  

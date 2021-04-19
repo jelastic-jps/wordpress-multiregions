@@ -1,6 +1,6 @@
 type: install
 jpsVersion: '1.7.2'
-name: Multi-Regional WordPress Cluster (BETA)
+name: Multi-Region WordPress Cluster (BETA)
 id: wordpress-cluster-multiregions
 categories:
   - apps/clusters
@@ -73,7 +73,7 @@ settings:
                      - Primary node at Region 1 performs writes and reads operations<br>
                      - Primary node at Region 2 by default performs reads operations but starts handling writes if initial primary database becomes unavailable<br>
                      - Replica node at Region 3 is used for reads operations only<br>
-                       <img width='587' height='500' src='https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregions/master/images/wp-geo-mm-white.svg'>" 
+                       <img width='587' height='500' src='https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregions/master/images/wp-geo-mm-white-1-bl.svg'>" 
 
           - value: sync
             caption: Sync Galera Distribution
@@ -83,7 +83,7 @@ settings:
                      - Region 1 includes 3 primary database nodes<br>
                      - Region 2 and 3 each includes 2 primary database nodes<br>
                      - All Galera Cluster nodes perform reads and writes operation<br>
-                      <img width='580' height='500' src='https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregions/master/images/wp-geo-galera-white.svg?sanitize=true'>
+                      <img width='580' height='500' src='https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregions/master/images/wp-geo-galera-white-1-bl.svg?sanitize=true'>
 
     - caption: Advanced Features
       type: displayfield
