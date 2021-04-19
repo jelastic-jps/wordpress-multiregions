@@ -131,21 +131,25 @@ settings:
             type: string
             name: cf_auth_email
             tooltip: ""
+            required: true
 
           - caption: CloudFlare Auth Key
             type: string
             name: cf_auth_key
             tooltip: ""
+            required: true
 
           - caption: CloudFlare Zone ID
             type: string
             name: cf_zone_id
             tooltip: ""
+            required: true
 
           - caption: Domain
             type: string
             name: cf_domain
             tooltip: ""
+            required: true
 
         false:
           - hideLabel: true
