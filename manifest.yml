@@ -6,8 +6,8 @@ categories:
   - apps/clusters
   - apps/content-management
 description: 
-  text: Highly-available and reliable WordPress cluster setup with automatic multi-region distribution. The package creates interconnected WordPress sub clusters across several availability zones ensuring the highest uptime and lowest latency.
-  short: Enterprise-grade WordPress Cluster with automatic distribution across multiple regions.
+  text: Highly-available and reliable WordPress cluster setup with automatic multi-region distribution. The package creates interconnected WordPress sub clusters across several regions ensuring the highest uptime and lowest latency.
+  short: Enterprise-grade WordPress Cluster with automatic distribution across several regions.
 logo: https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregions/master/images/82dark-back-01.svg
 baseUrl: https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregions/master
 
@@ -25,7 +25,7 @@ settings:
       max: 5
       filter:
         isActive: true
-      tooltip: <h3>Select the destination regions</h3> The first selected region will host a primary cluster, so it should have the highest performance.
+      tooltip: Select the destination regions. The first selected region will host the primary cluster, so this region should have the highest performance.
 
     - caption: Environment
       type: envname
@@ -63,7 +63,9 @@ settings:
       width: 443
       tooltip:
       tipParams: 
-        maxWidth: 600
+        maxWidth: 610
+        dismissDelay: 600000
+        hideOnOver: false
       values:        
           - value: async
             caption: Async Primary/Replica Distribution 
@@ -73,7 +75,7 @@ settings:
                      - Primary node at Region 1 performs writes and reads operations<br>
                      - Primary node at Region 2 by default performs reads operations but starts handling writes if initial primary database becomes unavailable<br>
                      - Replica node at Region 3 is used for reads operations only<br>
-                       <img width='587' height='500' src='https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregions/master/images/wp-geo-mm-white-1-bl.svg'>" 
+                       <img width='587' height='500' src='https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregions/master/images/wp-geo-mm-white-1-bl.svg?sanitize=true'>" 
 
           - value: sync
             caption: Sync Galera Distribution
