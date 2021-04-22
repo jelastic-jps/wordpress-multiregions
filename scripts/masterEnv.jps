@@ -6,7 +6,7 @@ baseUrl: https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregions/m
 
 onBeforeStop:
   - forEach(i:nodes.sqldb):
-      env.control.StopNode [${@i.id}]
+      cmd [${@i.id}]: sudo jem service stop; sleep 5;
 
 onAfterBindSSL:
   - importGlobalsFromNodeGroup: bl
