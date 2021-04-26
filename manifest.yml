@@ -328,14 +328,14 @@ actions:
 
   createEnvs:
     - script: |
-        var regions = '${settings.regions}'.split(','),
-            actions = [];
+        var regions = '${settings.regions}'.split(','), actions = [];
+        var envGroups = eval('(' + MANIFEST + ')').envGroups;
         for (var cluster = 1, n = regions.length + 1; cluster < n; cluster ++) {
           actions.push({
             jps: "${globals.wp_cluster_url}/manifest.yml?_r=${fn.random}",
             envName: "${settings.envName}-" + cluster,
             loggerName: "${settings.envName}-" + cluster,
-            envGroups: "${globals.envGroups}",
+            envGroups: envGroups,
             displayName: "${globals.displayName-" + cluster + "}",
             region: "${globals.region-" + cluster + "}",
             settings: {
@@ -352,11 +352,11 @@ actions:
               db_user: "${globals.db_user}",
               db_pass: "${globals.db_pass}",
               db_async_topology: "${globals.db_async_topology}"
-            }  
+            }
           });
         }
-        return { result: 0, onAfterReturn: { install: actions } };
-
+        return { result: 0, onAfterReturn: { 'marketplace.jps.install': actions } };
+  
   getEnvNodes:
     - script: |
         var regions = '${settings.regions}'.split(','),
