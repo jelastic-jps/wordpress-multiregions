@@ -124,46 +124,6 @@ settings:
       disabled: false
       tooltip: "Jelastic CDN is an HTTP/3 premium content delivery network of 160+ Super PoPs (points of presence) with bandwidth capacity up to 115 Tbps, advanced caching and acceleration strategies based on best-in-class IP Anycast technology."
 
-    - caption: CloudFlare registration
-      type: checkbox
-      name: cf_addon
-      value: false
-      disabled: false
-      hidden: false
-      tooltip: "Automated <a href='https://docs.jelastic.com/custom-domains/'>custom domain</a> registration at <a href='https://www.cloudflare.com/products/registrar/'>CloudFlare Registrar</a>."
-      showIf:
-        true:
-          - caption: CloudFlare Auth Email
-            type: string
-            name: cf_auth_email
-            tooltip: ""
-            required: true
-
-          - caption: CloudFlare Auth Key
-            type: string
-            name: cf_auth_key
-            tooltip: ""
-            required: true
-
-          - caption: CloudFlare Zone ID
-            type: string
-            name: cf_zone_id
-            tooltip: ""
-            required: true
-
-          - caption: Domain
-            type: string
-            name: cf_domain
-            tooltip: ""
-            required: true
-
-        false:
-          - hideLabel: true
-            hidden: true
-            type: label
-            caption: string
-            name: customString 
-
     - type: displayfield
       hideLabel: true
       hidden: true
@@ -199,27 +159,7 @@ onInstall:
   - initGlobals
   - setGlobals:
       domain: ${settings.envName}-1.${globals.domain-1}
-  - createEnvs
-  - if (${settings.cf_addon:false}):
-    - script: |
-        var regions = '${settings.regions}'.split(','),
-            actions = [];
-        for (var cluster = 1, n = regions.length + 1; cluster < n; cluster ++) {
-          actions.push({
-            jps: "${baseUrl}/scripts/cloudflareManager.jps?_r=${fn.random}",
-            envName: "${settings.envName}-" + cluster,
-            settings: {
-              cf_auth_email: "${settings.cf_auth_email}",
-              cf_auth_key: "${settings.cf_auth_key}",
-              cf_zone_id: "${settings.cf_zone_id}",
-              cf_domain: "${settings.cf_domain}"
-            }
-          });
-        }
-        return { result: 0, onAfterReturn: { install: actions } };
-    - setGlobals:
-        domain: ${settings.cf_domain}
-    
+  - createEnvs    
   - getEnvNodes
   - installEnvsManager
   
