@@ -60,12 +60,10 @@ In the opened confirmation window at Jelastic dashboard, choose:
 
 * **[Premium CDN](https://jelastic.com/blog/enterprise-cdn-verizon-integration/)** integration in order to provide Lightning-fast static assets loading  
 
-* **[CloudFlare](https://www.cloudflare.com/)** custom domain registration. Enter your credentails and custom domain for your Geo Distributed website  
-
 Finally click on **Install**
 
 <p align="left"> 
-<img src="images/install.png" width="500">
+<img src="images/installnew.png" width="500">
 </p>
 
 Once the deployment is finished, you’ll see an appropriate success pop-up with URLs for every environment and access credentials to your administration WordPress panel, whilst the same information will be duplicated to your email box.
