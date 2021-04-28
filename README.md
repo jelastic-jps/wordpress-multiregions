@@ -26,7 +26,7 @@ Each environment comprises the software stacks as follows:
 
 Click the **Deploy** button below, specify your email address within the widget, choose one of the Jelastic Public Cloud providers where the package is available and press **Install**.
 
-[![Deploy to Jelastic](https://github.com/jelastic-jps/git-push-deploy/raw/master/images/deploy-to-jelastic.png)](https://jelastic.com/install-application/?manifest=https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregions/master/manifest.yml&keys=app.jelastic.elastx.net;app.milesweb.cloud;app.jelastic.eapps.com;app.jelastic.saveincloud.net&filter=auto_cluster)
+[![Deploy to Jelastic](https://github.com/jelastic-jps/git-push-deploy/raw/master/images/deploy-to-jelastic.png)](https://jelastic.com/install-application/?manifest=https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregions/master/manifest.yml&keys=app.jelastic.elastx.net;app.cloudjiffy.co;app.paas.massivegrid.com;app.my.reclaim.cloud;app.wc.wafaicloud.com;app.j.layershift.co.uk)
 
 If you are already registered at Jelastic, you can deploy this cluster by importing the  [the package manifest raw link](https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregions/master/manifest.yml) within the dashboard.
  
