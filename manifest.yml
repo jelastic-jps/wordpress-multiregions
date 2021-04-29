@@ -291,6 +291,7 @@ actions:
               galera: "${globals.initial_env_master-" + cluster + "}",
               db_user: "${globals.db_user}",
               db_pass: "${globals.db_pass}",
+              loadGrowth: "${settings.loadGrowth}",
               db_async_topology: "${globals.db_async_topology}"
             }
           });
