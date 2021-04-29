@@ -21,7 +21,7 @@ settings:
       disableInactive: true
       selectFirstAvailable: true
       multiSelect: true
-      min: 3
+      min: 2
       max: 5
       filter:
         isActive: true
