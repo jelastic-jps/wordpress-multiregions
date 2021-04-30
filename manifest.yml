@@ -25,6 +25,7 @@ settings:
       max: 5
       filter:
         isActive: true
+        type: ["vz7"]
       tooltip: Select the destination regions. The first selected region will host the primary cluster, so this region should have the highest performance.
 
     - caption: Environment
