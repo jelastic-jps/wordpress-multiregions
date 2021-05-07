@@ -141,7 +141,7 @@ settings:
 
     - caption: Install WordPress Multisite Network
       type: checkbox
-      name: mu-addon
+      name: mu_addon
       value: false
       disabled: false
       tooltip: "Multisite is a type of WordPress installation that allows you to create and manage a network of multiple websites from a single WordPress dashboard. This lets you easily make changes and keep all of your websites updated from one place."
@@ -226,6 +226,11 @@ onInstall:
           setup_cache_replication: true
 
   - install-wordpress
+  - if (${settings.mu_addon:false}):
+    - install: ${globals.wp_cluster_url}/addon/WPMU.jps
+      envName: ${globals.master_env_name}
+      settings:
+        mode: subdir
 
   - if ('${settings.le_addon:false}' == 'true'):
     - setGlobals:
@@ -314,8 +319,7 @@ actions:
               db_user: "${globals.db_user}",
               db_pass: "${globals.db_pass}",
               loadGrowth: "${settings.loadGrowth}",
-              db_async_topology: "${globals.db_async_topology}",
-              mu-addon: "${settings.mu-addon}",
+              db_async_topology: "${globals.db_async_topology}"
             }
           });
         }
