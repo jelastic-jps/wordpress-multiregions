@@ -15,18 +15,68 @@ onBeforeInit: /scripts/settings.js?_r=${fn.random}
 
 settings:
   fields:
-    - caption: Regions
-      type: regionlist
-      name: regions
-      disableInactive: true
-      selectFirstAvailable: true
-      multiSelect: true
-      min: 2
-      max: 5
-      filter:
-        isActive: true
-        type: ["vz7"]
-      tooltip: Select the destination regions. The first selected region will host the primary cluster, so this region should have the highest performance.
+    - caption: Database Topology
+      type: list
+      name: db_async_topology
+      default: async
+      required: true
+      width: 443
+      tooltip:
+      tipParams: 
+        maxWidth: 610
+        dismissDelay: 600000
+        hideOnOver: false
+      values:        
+          - value: async
+            caption: Async Primary/Replica Distribution 
+            tooltip: <h2>Primary Replication with Extra Replicas</h2> 
+                     Pre-configured asynchronous replication with two interconnected<br> primary databases and one secondary replica.<br>
+                     This topology is recommended when <b>Latency</b> between regions is more than <b>20ms</b>.<br>
+                     <ul>
+                        <li>Primary node at Region 1 performs writes and reads operations<br>
+                        <li>Primary node at Region 2 by default performs reads operations but starts handling writes if initial primary database becomes unavailable<br>
+                        <li>Replica node at Region 3 is used for reads operations only<br>
+                     </ul>
+                       <img width='587' height='480' src='https://raw.githubusercontent.com/vlobzakov/wordpress-multiregions/master/images/wp-geo-mm-white-1-bl.svg?sanitize=true'> 
+          - value: sync
+            caption: Sync Galera Distribution
+            tooltip: <h2>Galera Cluster</h2>
+                     All servers can accept updates even if being issued concurrently.<br>
+                     This topology is recommended when <b>Latency</b> between regions is less than <b>20ms</b><br>
+                     <ul>
+                        <li>Region 1 includes 3 primary database nodes<br>
+                        <li>Region 2 and 3 each includes 2 primary database nodes<br>
+                        <li>All Galera Cluster nodes perform reads and writes operation<br>
+                     </ul>
+                      <img width='580' height='400' src='https://raw.githubusercontent.com/vlobzakov/wordpress-multiregions/master/images/wp-geo-galera-white-1-bl.svg?sanitize=true'>
+                      
+      showIf:
+        async:
+          - caption: Regions
+            type: regionlist
+            name: regions
+            disableInactive: true
+            selectFirstAvailable: true
+            multiSelect: true
+            min: 2
+            max: 5
+            filter:
+              isActive: true
+              type: ["vz7"]
+            tooltip: Select the destination regions. The first selected region will host the primary cluster, so this region should have the highest performance.
+        sync:
+          - caption: Regions
+            type: regionlist
+            name: regions
+            disableInactive: true
+            selectFirstAvailable: true
+            multiSelect: true
+            min: 3
+            max: 5
+            filter:
+              isActive: true
+              type: ["vz7"]
+            tooltip: Select the destination regions. The first selected region will host the primary cluster, so this region should have the highest performance.    
 
     - caption: Environment
       type: envname
@@ -55,42 +105,6 @@ settings:
           - value: fast
             caption: High Load
             tooltip: <h3>High load scaling strategy</h3>add 2 new nodes when CPU > 30% <p>remove when CPU < 10%</p>
-
-    - caption: Database Topology
-      type: list
-      name: db_async_topology
-      default: async
-      required: true
-      width: 443
-      tooltip:
-      tipParams: 
-        maxWidth: 610
-        dismissDelay: 600000
-        hideOnOver: false
-      values:        
-          - value: async
-            caption: Async Primary/Replica Distribution 
-            tooltip: <h2>Primary Replication with Extra Replicas</h2> 
-                     Pre-configured asynchronous replication with two interconnected<br> primary databases and one secondary replica.<br>
-                     This topology is recommended when <b>Latency</b> between regions is more than <b>20ms</b>.<br>
-                     <ul>
-                        <li>Primary node at Region 1 performs writes and reads operations<br>
-                        <li>Primary node at Region 2 by default performs reads operations but starts handling writes if initial primary database becomes unavailable<br>
-                        <li>Replica node at Region 3 is used for reads operations only<br>
-                     </ul>
-                       <img width='587' height='480' src='https://raw.githubusercontent.com/vlobzakov/wordpress-multiregions/master/images/wp-geo-mm-white-1-bl.svg?sanitize=true'> 
-
-          - value: sync
-            caption: Sync Galera Distribution
-            tooltip: <h2>Galera Cluster</h2>
-                     All servers can accept updates even if being issued concurrently.<br>
-                     This topology is recommended when <b>Latency</b> between regions is less than <b>20ms</b><br>
-                     <ul>
-                        <li>Region 1 includes 3 primary database nodes<br>
-                        <li>Region 2 and 3 each includes 2 primary database nodes<br>
-                        <li>All Galera Cluster nodes perform reads and writes operation<br>
-                     </ul>
-                      <img width='580' height='400' src='https://raw.githubusercontent.com/vlobzakov/wordpress-multiregions/master/images/wp-geo-galera-white-1-bl.svg?sanitize=true'>
 
     - caption: Advanced Features
       type: displayfield
@@ -125,13 +139,20 @@ settings:
       disabled: false
       tooltip: "Jelastic CDN is an HTTP/3 premium content delivery network of 160+ Super PoPs (points of presence) with bandwidth capacity up to 115 Tbps, advanced caching and acceleration strategies based on best-in-class IP Anycast technology."
 
+    - caption: Install WordPress Multisite Network
+      type: checkbox
+      name: mu-addon
+      value: false
+      disabled: false
+      tooltip: "Multisite is a type of WordPress installation that allows you to create and manage a network of multiple websites from a single WordPress dashboard. This lets you easily make changes and keep all of your websites updated from one place."
+
     - type: displayfield
       hideLabel: true
       hidden: true
       name: bl_count   
       value: 1
       markup:
-
+      
 globals:
   wp_cluster_url: https://raw.githubusercontent.com/sych74/wordpress-cluster/v3.0.0
   db_cluster_url: https://raw.githubusercontent.com/jelastic-jps/mysql-cluster/v2.4.0
@@ -293,7 +314,8 @@ actions:
               db_user: "${globals.db_user}",
               db_pass: "${globals.db_pass}",
               loadGrowth: "${settings.loadGrowth}",
-              db_async_topology: "${globals.db_async_topology}"
+              db_async_topology: "${globals.db_async_topology}",
+              mu-addon: "${settings.mu-addon}",
             }
           });
         }
