@@ -152,7 +152,9 @@ settings:
       name: bl_count   
       value: 1
       markup:
-      
+mixins:
+ - https://raw.githubusercontent.com/jelastic-jps/wordpress-cluster/master/configs/vers.yaml
+
 globals:
   wp_cluster_url: https://raw.githubusercontent.com/sych74/wordpress-cluster/v3.0.0
   db_cluster_url: https://raw.githubusercontent.com/jelastic-jps/mysql-cluster/v2.4.0
@@ -377,7 +379,8 @@ actions:
         db_pass: ${globals.db_pass}
         wp_admin_pass: ${globals.wp_admin_pass}
         wp_title: "Hello World"
-        wp_url: ${globals.protocol}://${globals.domain}    
+        wp_url: ${globals.protocol}://${globals.domain}
+        version_wordpress: ${globals.version_wordpress}
   
 success:
   email: success/email/${globals.regionsCount}-region-${globals.email}.md?_r=${fn.random}
