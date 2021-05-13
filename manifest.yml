@@ -38,7 +38,6 @@ settings:
                         <li>Replica node at Region 3 is used for reads operations only<br>
                      </ul>
                        <img width='587' height='480' src='https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregions/master/images/wp-geo-mm-white-1-bl.svg?sanitize=true'> 
-
           - value: sync
             caption: Sync Galera Distribution
             tooltip: <h2>Galera Cluster</h2>
