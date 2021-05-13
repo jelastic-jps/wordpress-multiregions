@@ -1,6 +1,6 @@
 type: install
 jpsVersion: '1.7.2'
-name: Multi-Region WordPress Cluster (BETA)
+name: Multi-Region WordPress Cluster v1 (BETA)
 id: wordpress-cluster-multiregions
 categories:
   - apps/clusters
@@ -15,17 +15,68 @@ onBeforeInit: /scripts/settings.js?_r=${fn.random}
 
 settings:
   fields:
-    - caption: Regions
-      type: regionlist
-      name: regions
-      disableInactive: true
-      selectFirstAvailable: true
-      multiSelect: true
-      min: 3
-      max: 5
-      filter:
-        isActive: true
-      tooltip: Select the destination regions. The first selected region will host the primary cluster, so this region should have the highest performance.
+    - caption: Database Topology
+      type: list
+      name: db_async_topology
+      default: async
+      required: true
+      width: 443
+      tooltip:
+      tipParams: 
+        maxWidth: 610
+        dismissDelay: 600000
+        hideOnOver: false
+      values:        
+          - value: async
+            caption: Async Primary/Replica Distribution 
+            tooltip: <h2>Primary Replication with Extra Replicas</h2> 
+                     Pre-configured asynchronous replication with two interconnected<br> primary databases and one secondary replica.<br>
+                     This topology is recommended when <b>Latency</b> between regions is more than <b>20ms</b>.<br>
+                     <ul>
+                        <li>Primary node at Region 1 performs writes and reads operations<br>
+                        <li>Primary node at Region 2 by default performs reads operations but starts handling writes if initial primary database becomes unavailable<br>
+                        <li>Replica node at Region 3 is used for reads operations only<br>
+                     </ul>
+                       <img width='587' height='480' src='https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregions/master/images/wp-geo-mm-white-1-bl.svg?sanitize=true'> 
+          - value: sync
+            caption: Sync Galera Distribution
+            tooltip: <h2>Galera Cluster</h2>
+                     All servers can accept updates even if being issued concurrently.<br>
+                     This topology is recommended when <b>Latency</b> between regions is less than <b>20ms</b><br>
+                     <ul>
+                        <li>Region 1 includes 3 primary database nodes<br>
+                        <li>Region 2 and 3 each includes 2 primary database nodes<br>
+                        <li>All Galera Cluster nodes perform reads and writes operation<br>
+                     </ul>
+                      <img width='580' height='400' src='https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregions/master/images/wp-geo-galera-white-1-bl.svg?sanitize=true'>
+                      
+      showIf:
+        async:
+          - caption: Regions
+            type: regionlist
+            name: regions
+            disableInactive: true
+            selectFirstAvailable: true
+            multiSelect: true
+            min: 2
+            max: 5
+            filter:
+              isActive: true
+              type: ["vz7"]
+            tooltip: Select the destination regions. The first selected region will host the primary cluster, so this region should have the highest performance.
+        sync:
+          - caption: Regions
+            type: regionlist
+            name: regions
+            disableInactive: true
+            selectFirstAvailable: true
+            multiSelect: true
+            min: 3
+            max: 5
+            filter:
+              isActive: true
+              type: ["vz7"]
+            tooltip: Select the destination regions. The first selected region will host the primary cluster, so this region should have the highest performance.    
 
     - caption: Environment
       type: envname
@@ -55,42 +106,6 @@ settings:
             caption: High Load
             tooltip: <h3>High load scaling strategy</h3>add 2 new nodes when CPU > 30% <p>remove when CPU < 10%</p>
 
-    - caption: Database Topology
-      type: list
-      name: db_async_topology
-      default: async
-      required: true
-      width: 443
-      tooltip:
-      tipParams: 
-        maxWidth: 610
-        dismissDelay: 600000
-        hideOnOver: false
-      values:        
-          - value: async
-            caption: Async Primary/Replica Distribution 
-            tooltip: <h2>Primary Replication with Extra Replicas</h2> 
-                     Pre-configured asynchronous replication with two interconnected<br> primary databases and one secondary replica.<br>
-                     This topology is recommended when <b>Latency</b> between regions is more than <b>20ms</b>.<br>
-                     <ul>
-                        <li>Primary node at Region 1 performs writes and reads operations<br>
-                        <li>Primary node at Region 2 by default performs reads operations but starts handling writes if initial primary database becomes unavailable<br>
-                        <li>Replica node at Region 3 is used for reads operations only<br>
-                     </ul>
-                       <img width='587' height='480' src='https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregions/master/images/wp-geo-mm-white-1-bl.svg?sanitize=true'> 
-
-          - value: sync
-            caption: Sync Galera Distribution
-            tooltip: <h2>Galera Cluster</h2>
-                     All servers can accept updates even if being issued concurrently.<br>
-                     This topology is recommended when <b>Latency</b> between regions is less than <b>20ms</b><br>
-                     <ul>
-                        <li>Region 1 includes 3 primary database nodes<br>
-                        <li>Region 2 and 3 each includes 2 primary database nodes<br>
-                        <li>All Galera Cluster nodes perform reads and writes operation<br>
-                     </ul>
-                      <img width='580' height='400' src='https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregions/master/images/wp-geo-galera-white-1-bl.svg?sanitize=true'>
-
     - caption: Advanced Features
       type: displayfield
       name: displayfield
@@ -113,8 +128,8 @@ settings:
     - caption: Install Let's Encrypt SSL with Auto-Renewal
       type: checkbox
       name: le_addon
-      value: false
-      disabled: true
+      value: true
+      disabled: false
       tooltip: "Advanced integration with Let's Encrypt certificate authority that simplifies and automates the process of issuing, configuring and renewing trusted SSL certificates."
 
     - caption: Install Lightning-Fast Premium CDN with 160+ PoPs
@@ -124,12 +139,21 @@ settings:
       disabled: false
       tooltip: "Jelastic CDN is an HTTP/3 premium content delivery network of 160+ Super PoPs (points of presence) with bandwidth capacity up to 115 Tbps, advanced caching and acceleration strategies based on best-in-class IP Anycast technology."
 
+    - caption: Install WordPress Multisite Network
+      type: checkbox
+      name: mu_addon
+      value: false
+      disabled: false
+      tooltip: "Multisite is a type of WordPress installation that allows you to create and manage a network of multiple websites from a single WordPress dashboard. This lets you easily make changes and keep all of your websites updated from one place."
+
     - type: displayfield
       hideLabel: true
       hidden: true
       name: bl_count   
       value: 1
       markup:
+mixins:
+ - https://raw.githubusercontent.com/jelastic-jps/wordpress-cluster/master/configs/vers.yaml
 
 globals:
   wp_cluster_url: https://raw.githubusercontent.com/jelastic-jps/wordpress-cluster/v3.0.0
@@ -204,6 +228,11 @@ onInstall:
           setup_cache_replication: true
 
   - install-wordpress
+  - if (${settings.mu_addon:false}):
+    - install: ${globals.wp_cluster_url}/addon/WPMU.jps
+      envName: ${globals.master_env_name}
+      settings:
+        mode: subdir
 
   - if ('${settings.le_addon:false}' == 'true'):
     - setGlobals:
@@ -291,6 +320,7 @@ actions:
               galera: "${globals.initial_env_master-" + cluster + "}",
               db_user: "${globals.db_user}",
               db_pass: "${globals.db_pass}",
+              loadGrowth: "${settings.loadGrowth}",
               db_async_topology: "${globals.db_async_topology}"
             }
           });
@@ -349,7 +379,8 @@ actions:
         db_pass: ${globals.db_pass}
         wp_admin_pass: ${globals.wp_admin_pass}
         wp_title: "Hello World"
-        wp_url: ${globals.protocol}://${globals.domain}    
+        wp_url: ${globals.protocol}://${globals.domain}
+        version_wordpress: ${globals.version_wordpress}
   
 success:
   email: success/email/${globals.regionsCount}-region-${globals.email}.md?_r=${fn.random}
