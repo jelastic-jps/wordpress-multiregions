@@ -128,8 +128,8 @@ settings:
     - caption: Install Let's Encrypt SSL with Auto-Renewal
       type: checkbox
       name: le_addon
-      value: false
-      disabled: true
+      value: true
+      disabled: false
       tooltip: "Advanced integration with Let's Encrypt certificate authority that simplifies and automates the process of issuing, configuring and renewing trusted SSL certificates."
 
     - caption: Install Lightning-Fast Premium CDN with 160+ PoPs
