@@ -24,9 +24,9 @@ Each environment comprises the software stacks as follows:
 
 ## Deployment to the Cloud
 
-Click the **Deploy** button below, specify your email address within the widget, choose one of the Jelastic Public Cloud providers where the package is available and press **Install**.
+Click the **REQUEST INSTALLATION** button below and fill out the form within the widget in order to get an access to the installation.
 
-[![Deploy to Jelastic](https://github.com/jelastic-jps/git-push-deploy/raw/master/images/deploy-to-jelastic.png)](https://jelastic.com/install-application/?manifest=https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregions/master/manifest.yml&keys=app.jelastic.elastx.net;app.milesweb.cloud;app.jelastic.eapps.com;app.jelastic.saveincloud.net&filter=auto_cluster)
+[![Request Installation](images/request-installation.png)](https://jelastic.com/managed-auto-scalable-clusters-for-business/#multi-region-wordpress)
 
 If you are already registered at Jelastic, you can deploy this cluster by importing the  [the package manifest raw link](https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregions/master/manifest.yml) within the dashboard.
  
@@ -60,12 +60,10 @@ In the opened confirmation window at Jelastic dashboard, choose:
 
 * **[Premium CDN](https://jelastic.com/blog/enterprise-cdn-verizon-integration/)** integration in order to provide Lightning-fast static assets loading  
 
-* **[CloudFlare](https://www.cloudflare.com/)** custom domain registration. Enter your credentails and custom domain for your Geo Distributed website  
-
 Finally click on **Install**
 
 <p align="left"> 
-<img src="images/install.png" width="500">
+<img src="images/installnew.png" width="500">
 </p>
 
 Once the deployment is finished, you’ll see an appropriate success pop-up with URLs for every environment and access credentials to your administration WordPress panel, whilst the same information will be duplicated to your email box.
