@@ -56,7 +56,7 @@ settings:
             type: regionlist
             name: regions
             disableInactive: true
-            selectFirstAvailable: true
+            selectFirstAvailable: false
             multiSelect: true
             min: 2
             max: 5
@@ -69,7 +69,7 @@ settings:
             type: regionlist
             name: regions
             disableInactive: true
-            selectFirstAvailable: true
+            selectFirstAvailable: false
             multiSelect: true
             min: 3
             max: 5
