@@ -2,7 +2,7 @@ jpsType: update
 id: geo-glusterfs-cluster
 name: Geo GlusterFS Cluster
 description: Geo GlusterFS Cluster
-baseUrl: https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregions/master
+baseUrl: https://raw.githubusercontent.com/sych74/wordpress-multiregions/master
 
 globals:
   install_gluster_cluster: ${settings.install_gluster_cluster:false}
@@ -181,8 +181,8 @@ actions:
         nodeId: ${nodes.storage.master.id}
         commandList:
           - command: |-
-              gluster volume geo-replication jelastic jelastic@${@slave}::jelastic create push-pem force
-              gluster volume geo-replication jelastic jelastic@${@slave}::jelastic start
+              gluster volume geo-replication data jelastic@${@slave}::data create push-pem force
+              gluster volume geo-replication data jelastic@${@slave}::data start
 
   getGlusterSlaveAddress:
     - script: |
