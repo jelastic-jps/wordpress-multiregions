@@ -49,6 +49,6 @@ actions:
   
   addSlaveGlusterFS:
     - cmd[${nodes.storage.master.id}]: |-
-        gluster volume geo-replication jelastic jelastic@${this.slave}::jelastic create push-pem force
-        gluster volume geo-replication jelastic jelastic@${this.slave}::jelastic start
+        gluster volume geo-replication data jelastic@${this.slave}::data create push-pem force
+        gluster volume geo-replication data jelastic@${this.slave}::data start
     
