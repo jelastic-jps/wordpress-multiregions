@@ -149,7 +149,8 @@ actions:
                 setup_glusterfs_cluster: true,
                 sshPubKey: sshPubKey,
                 initial_glusterfs_master: true,
-                initial_glusterfs_slave: true
+                initial_glusterfs_slave: true,
+                glusterfs_master_address: "${globals.glusterfs_master_address}"
               }  
             });
           }
