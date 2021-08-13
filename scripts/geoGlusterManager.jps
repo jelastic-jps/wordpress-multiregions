@@ -17,6 +17,7 @@ onInstall:
   - getClusterEnvs
   - importGlobalsFromNodeGroup: bl
   - getGlusterSlaveAddress
+  - getGlusterMasterAddress
   - if ('${globals.install_gluster_cluster}' == 'true'):
     - generateSSHkey  
     - setupGeoGlusterFS
@@ -93,7 +94,8 @@ actions:
               jps: "${baseUrl}/scripts/geoGluster.jps?_r=${fn.random}",
               envName: envs[i],
               settings: {
-                initial_glusterfs_slave: "true"
+                initial_glusterfs_slave: "true",
+                glusterfs_master_address: "${globals.glusterfs_master_address}"
               }
             });
           }
@@ -201,4 +203,17 @@ actions:
           }
         }
         glbs["glusterfs_slaves_address"] = glusterfs_slaves_address;
+        return { result: 0, onAfterReturn: onAfterReturn };
+
+  getGlusterMasterAddress:
+    - script: |
+        var onAfterReturn = { setGlobals: {} },
+            glbs = onAfterReturn.setGlobals;
+        var resp = jelastic.env.control.GetEnvInfo('${globals.master_env_name}', session);
+        if (resp.result != 0) return resp;
+        for (var l = 0, k = resp.nodes; l < k.length; l++) {
+          if ((k[l].nodeGroup == 'storage') && (k[l].ismaster))
+            glbs["glusterfs_master_address"] = k[l].address;
+          }
+        }
         return { result: 0, onAfterReturn: onAfterReturn };
