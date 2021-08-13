@@ -9,6 +9,7 @@ globals:
   initial_glusterfs_slave: ${settings.initial_glusterfs_slave:false}
   setup_glusterfs_cluster: ${settings.setup_glusterfs_cluster:false}
   glusterfs_slaves_address: ${settings.glusterfs_slaves_address:false}
+  glusterfs_master_address: ${settings.glusterfs_master_address:false}
   addCommonPubKey: ${settings.addCommonPubKey:false}
 
 onInstall:
@@ -37,6 +38,7 @@ actions:
     - cmd[${nodes.storage.master.id}]: |-
         gluster-mountbroker setup /var/mountbroker-root geogroup;
         gluster-mountbroker add jelastic geoaccount;
+        gluster volume set data auth.allow '${globals.glusterfs_master_address}';
 
   initialMasterGlusterFSCluster:
     - cmd[${nodes.storage.master.id}]: |-
