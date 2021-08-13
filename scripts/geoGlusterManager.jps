@@ -214,6 +214,5 @@ actions:
         for (var l = 0, k = resp.nodes; l < k.length; l++) {
           if ((k[l].nodeGroup == 'storage') && (k[l].ismaster))
             glbs["glusterfs_master_address"] = k[l].address;
-          }
         }
         return { result: 0, onAfterReturn: onAfterReturn };
