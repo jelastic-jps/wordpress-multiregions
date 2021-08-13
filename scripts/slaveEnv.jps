@@ -8,7 +8,7 @@ onBeforeStop:
       cmd [${@i.id}]: sudo jem service stop; sleep 5;
 
 onInstall:
-  - cmd[storage]: echo test
+  - installDummyAddons
 
 actions:
   installDummyAddons:
