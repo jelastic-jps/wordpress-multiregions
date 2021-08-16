@@ -9,6 +9,7 @@ globals:
   initial_glusterfs_slave: ${settings.initial_glusterfs_slave:false}
   setup_glusterfs_cluster: ${settings.setup_glusterfs_cluster:false}
   glusterfs_slaves_address: ${settings.glusterfs_slaves_address:false}
+  glusterfs_master_address: ${settings.glusterfs_master_address:false}
   addCommonPubKey: ${settings.addCommonPubKey:false}
 
 onInstall:
@@ -49,6 +50,6 @@ actions:
   
   addSlaveGlusterFS:
     - cmd[${nodes.storage.master.id}]: |-
-        gluster volume geo-replication jelastic jelastic@${this.slave}::jelastic create push-pem force
-        gluster volume geo-replication jelastic jelastic@${this.slave}::jelastic start
+        gluster volume geo-replication data jelastic@${this.slave}::data create push-pem force
+        gluster volume geo-replication data jelastic@${this.slave}::data start
     
