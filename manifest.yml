@@ -9,7 +9,7 @@ description:
   text: Highly-available and reliable WordPress cluster setup with automatic multi-region distribution. The package creates interconnected WordPress sub clusters across several regions ensuring the highest uptime and lowest latency.
   short: Enterprise-grade WordPress Cluster with automatic distribution across several regions.
 logo: https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregions/master/images/82dark-back-01.svg
-baseUrl: https://raw.githubusercontent.com/sych74/wordpress-multiregions/master
+baseUrl: https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregions/master
 
 onBeforeInit: /scripts/settings.js?_r=${fn.random}
 
