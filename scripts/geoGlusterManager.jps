@@ -2,7 +2,7 @@ jpsType: update
 id: geo-glusterfs-cluster
 name: Geo GlusterFS Cluster
 description: Geo GlusterFS Cluster
-baseUrl: https://raw.githubusercontent.com/sych74/wordpress-multiregions/master
+baseUrl: https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregions/master
 
 globals:
   install_gluster_cluster: ${settings.install_gluster_cluster:false}
