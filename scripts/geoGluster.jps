@@ -38,7 +38,6 @@ actions:
     - cmd[${nodes.storage.master.id}]: |-
         gluster-mountbroker setup /var/mountbroker-root geogroup;
         gluster-mountbroker add jelastic geoaccount;
-        gluster volume set data auth.allow '${globals.glusterfs_master_address}';
 
   initialMasterGlusterFSCluster:
     - cmd[${nodes.storage.master.id}]: |-
