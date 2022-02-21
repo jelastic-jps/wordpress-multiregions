@@ -1,6 +1,6 @@
 type: install
 jpsVersion: '1.7.2'
-name: Multi-Region WordPress Cluster v1 (BETA)
+name: Multi-Region WordPress Cluster v1 (Alpha)
 id: wordpress-cluster-multiregions
 categories:
   - apps/clusters
