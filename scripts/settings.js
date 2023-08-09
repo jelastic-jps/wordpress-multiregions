@@ -99,7 +99,7 @@ if (!prod || group.groupType == 'trial' || regions.array.length < 2) {
     fields["bl_count"].markup = "LiteSpeed software stack templates are not supported at the moment.";
   if (group.groupType == 'trial')
     fields["bl_count"].markup = "WordPress multiregion cluster is not available for " + group.groupType + ". Please upgrade your account.";
-  if (regions.array.length < 2)
+  if (regions.array.length < 1)
     fields["bl_count"].markup = "Package cannot be installed on less than 2 regions. Please contact support or choose a <a href='https://jelastic.cloud/?regions=multiregion' target='_blank'>provider</a> with more regions";  
   fields["bl_count"].cls = "warning";
   fields["bl_count"].hidden = false;
