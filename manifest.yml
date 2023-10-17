@@ -58,6 +58,7 @@ settings:
             disableInactive: true
             selectFirstAvailable: false
             multiSelect: true
+            required: true
             min: 2
             max: 5
             filter:
@@ -71,6 +72,7 @@ settings:
             disableInactive: true
             selectFirstAvailable: false
             multiSelect: true
+            required: true
             min: 3
             max: 5
             filter:
