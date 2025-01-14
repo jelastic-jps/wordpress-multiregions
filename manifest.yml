@@ -58,6 +58,7 @@ settings:
             disableInactive: true
             selectFirstAvailable: false
             multiSelect: true
+            required: true
             min: 2
             max: 5
             filter:
@@ -71,6 +72,7 @@ settings:
             disableInactive: true
             selectFirstAvailable: false
             multiSelect: true
+            required: true
             min: 3
             max: 5
             filter:
@@ -157,7 +159,7 @@ mixins:
 
 globals:
   wp_cluster_url: https://raw.githubusercontent.com/jelastic-jps/wordpress-cluster/v3.0.0
-  db_cluster_url: https://raw.githubusercontent.com/jelastic-jps/mysql-cluster/v2.4.0
+  db_cluster_url: https://raw.githubusercontent.com/jelastic-jps/mysql-cluster/v3.0.0
   galera_server_id: ${fn.random}
   db_user: jelastic-${fn.random}
   db_pass: ${fn.password(10)}
