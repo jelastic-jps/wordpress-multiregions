@@ -1,0 +1,29 @@
+type: update
+id: multiregion-wordpress-cluster-recovering
+name: Recovering Multiregion WordPress Cluster
+baseUrl: https://raw.githubusercontent.com/jelastic-jps/wordpress-multiregions/master
+
+mixins:
+  - https://github.com/jelastic-jps/glusterfs/blob/master/replication-logic.jps
+
+onInstall:
+  - initiateGlusterFSCluster
+  - api:
+    - method: jelastic.environment.file.AddMountPointByGroup
+      params:
+        nodeGroup: cp
+        sourceNodeId: ${nodes.storage.master.id}
+        sourcePath: /data
+        path: /var/www/webroot/ROOT
+        sourceAddressType: NODE_GROUP
+        protocol: NFS4
+  - install:
+    - jps: ${baseUrl}/scripts/cacheManager.jps
+      envName: ${env.name}
+      settings:
+        setup_cache_replication: true
+
+    - jps: ${baseUrl}/scripts/geoGaleraManager.jps
+      envName: ${env.name}
+      settings:
+        install_galera_cluster: true
