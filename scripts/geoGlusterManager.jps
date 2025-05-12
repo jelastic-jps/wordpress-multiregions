@@ -23,7 +23,7 @@ onInstall:
     - setupGeoGlusterFS
     - addSlaveGlusterFS
 
-  - if ('${globals.update_galera_cluster}' == 'true'):
+  - if ('${globals.update_cluster}' == 'true'):
       - getClusterEnvs
       - setCustomGlobals
       - resetCluster
